@@ -32,7 +32,7 @@ TED API (gratis)  →  1. fetch      Henter alle aktive IT-udbud fra de seneste 
 Lav en profil for hvert bureau ud fra deres hjemmeside:
 
 ```bash
-python radar.py profile --name "Bureau ApS" --url https://bureau.dk --countries DNK,SWE,NOR,DEU
+python radar.py profile --name "Bureau ApS" --url https://bureau.dk --countries DNK,SWE,NOR,DEU --languages DAN,ENG
 ```
 
 Profilen gemmes i `profiles/bureau-aps.json`. Læs den igennem og ret den, hvis AI har misforstået noget. Kør derefter:

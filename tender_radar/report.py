@@ -16,7 +16,8 @@ TEXT = {
     "da": {
         "heading": "{n} relevante offentlige udbud til {name}",
         "intro": "Vi har gennemgået {total} nye IT-udbud i EU fra de seneste {days} dage og fundet dem, der passer bedst til jer.",
-        "buyer": "Køber", "deadline": "Tilbudsfrist", "value": "Anslået værdi", "fit": "Match",
+        "buyer": "Køber", "deadline": "Tilbudsfrist", "request": "Frist for ansøgning", "value": "Anslået værdi",
+        "fit": "Match", "lang": "Tilbudssprog",
         "unknown": "ikke oplyst", "open": "Se udbuddet på TED",
         "footer": "Genereret {today} ud fra offentlige data fra TED (ted.europa.eu). Tjek altid det originale udbudsmateriale.",
         "none": "Ingen udbud over tærsklen i denne periode.",
@@ -24,12 +25,36 @@ TEXT = {
     "en": {
         "heading": "{n} relevant public tenders for {name}",
         "intro": "We reviewed {total} new IT tenders across the EU from the last {days} days and picked the best fits for you.",
-        "buyer": "Buyer", "deadline": "Deadline", "value": "Estimated value", "fit": "Match",
+        "buyer": "Buyer", "deadline": "Deadline", "request": "Application deadline", "value": "Estimated value",
+        "fit": "Match", "lang": "Bid language",
         "unknown": "not stated", "open": "View tender on TED",
         "footer": "Generated {today} from public TED data (ted.europa.eu). Always check the original tender documents.",
         "none": "No tenders above the threshold in this period.",
     },
 }
+
+
+LANGUAGES = {
+    "da": {"DAN": "dansk", "ENG": "engelsk", "DEU": "tysk", "SWE": "svensk", "NOR": "norsk", "FIN": "finsk",
+           "NLD": "hollandsk", "FRA": "fransk", "POL": "polsk", "SPA": "spansk", "ITA": "italiensk",
+           "CES": "tjekkisk", "EST": "estisk", "LIT": "litauisk", "LAV": "lettisk", "POR": "portugisisk"},
+    "en": {"DAN": "Danish", "ENG": "English", "DEU": "German", "SWE": "Swedish", "NOR": "Norwegian",
+           "FIN": "Finnish", "NLD": "Dutch", "FRA": "French", "POL": "Polish", "SPA": "Spanish"},
+}
+
+
+def _langs(t, tx, lang):
+    names = LANGUAGES.get(lang, {})
+    return ", ".join(names.get(c, c) for c in t.get("languages") or []) or tx["unknown"]
+
+
+def _deadline_label(t, tx):
+    return tx["request"] if t.get("deadline_kind") == "request" else tx["deadline"]
+
+
+def _buyer(t, limit=80):
+    b = t["buyer"]
+    return b if len(b) <= limit else b[:limit].rsplit(" ", 1)[0] + " …"
 
 
 def _value(t, tx):
@@ -50,8 +75,9 @@ def build(profile, results, total, days):
         a = t["ai"]
         md += [
             f"## {i}. {a['title_en']} ({tx['fit']}: {score}%)",
-            f"- **{tx['buyer']}:** {t['buyer']} ({country_name(t['country'])})",
-            f"- **{tx['deadline']}:** {t['deadline'] or tx['unknown']}",
+            f"- **{tx['buyer']}:** {_buyer(t)} ({country_name(t['country'])})",
+            f"- **{_deadline_label(t, tx)}:** {t['deadline'] or tx['unknown']}",
+            f"- **{tx['lang']}:** {_langs(t, tx, lang)}",
             f"- **{tx['value']}:** {_value(t, tx)}",
             f"- {a['summary_en']}",
             f"- *{reason}*",
@@ -73,8 +99,9 @@ def build(profile, results, total, days):
   <div style="font-size:13px;color:{color};font-weight:bold">{tx['fit']}: {score}%</div>
   <div style="font-size:17px;font-weight:bold;margin:4px 0 8px">{i}. {e(a['title_en'])}</div>
   <div style="font-size:14px;color:#57606a;margin-bottom:8px">
-    <b>{tx['buyer']}:</b> {e(t['buyer'])} ({e(country_name(t['country']))}) &nbsp;·&nbsp;
-    <b>{tx['deadline']}:</b> {e(t['deadline'] or tx['unknown'])} &nbsp;·&nbsp;
+    <b>{tx['buyer']}:</b> {e(_buyer(t))} ({e(country_name(t['country']))}) &nbsp;·&nbsp;
+    <b>{e(_deadline_label(t, tx))}:</b> {e(t['deadline'] or tx['unknown'])} &nbsp;·&nbsp;
+    <b>{tx['lang']}:</b> {e(_langs(t, tx, lang))} &nbsp;·&nbsp;
     <b>{tx['value']}:</b> {e(_value(t, tx))}
   </div>
   <div style="font-size:14px;margin-bottom:8px">{e(a['summary_en'])}</div>

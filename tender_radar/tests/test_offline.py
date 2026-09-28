@@ -62,6 +62,25 @@ class OfflineTests(unittest.TestCase):
         self.assertEqual(ted.format_value({"value": "1200000", "currency": "DKK"}), "1.200.000 DKK")
         self.assertEqual(ted.format_value({"value": "n/a"}), "unknown")
 
+    def test_deadline_fallback_and_languages(self):
+        raw = dict(RAW, **{"deadline-receipt-tender-date-lot": [],
+                           "deadline-receipt-request-date-lot": ["2026-10-20+02:00"],
+                           "submission-language": ["DEU", "ENG", "DEU"]})
+        t = ted.normalize(raw)
+        self.assertEqual((t["deadline"], t["deadline_kind"]), ("2026-10-20", "request"))
+        self.assertEqual(t["languages"], ["DEU", "ENG"])
+
+    def test_language_cap(self):
+        t = dict(ted.normalize(RAW), languages=["DEU"])
+        self.assertFalse(analyze.language_ok(t, {"languages": ["DAN", "ENG"]}))
+        self.assertTrue(analyze.language_ok(t, {"languages": ["dan", "deu"]}))
+        self.assertTrue(analyze.language_ok(dict(t, languages=[]), {"languages": ["DAN"]}))
+        tenders = [t]
+        analyze.summarize(tenders, FakeLLM(), {}, log=lambda *_: None)
+        profile = {"name": "X", "description": "web", "languages": ["DAN", "ENG"]}
+        results = analyze.match(tenders, profile, FakeLLM(), log=lambda *_: None)
+        self.assertEqual(results[0][1], analyze.LANGUAGE_CAP)
+
     def test_query(self):
         q = ted.build_query(["72000000", "48000000"], 30, ["cn-standard"])
         self.assertIn("classification-cpv IN (72000000 48000000)", q)
@@ -107,6 +126,11 @@ class OfflineTests(unittest.TestCase):
         self.assertIn("Holland", page)
         self.assertIn("150.000 EUR", md)
         self.assertIn("https://ted.europa.eu/en/notice/-/detail/123456-2026", page)
+        long_buyer = dict(results[0][0], buyer="Ministerium " * 20, languages=["DEU"], deadline_kind="request")
+        page, md = report.build(profile, [(long_buyer, 90, "x")], total=1, days=30)
+        self.assertIn("Frist for ansøgning", md)
+        self.assertIn("Tilbudssprog:** tysk", md)
+        self.assertIn(" …", md)
 
 
 if __name__ == "__main__":

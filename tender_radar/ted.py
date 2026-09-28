@@ -23,6 +23,9 @@ FIELDS = [
     "buyer-country",
     "classification-cpv",
     "deadline-receipt-tender-date-lot",
+    "deadline-receipt-request-date-lot",
+    "deadline-date-lot",
+    "submission-language",
     "estimated-value-proc",
     "estimated-value-cur-proc",
     "estimated-value-lot",
@@ -184,9 +187,20 @@ def estimated_value(n):
     return value, pick_first(cur)
 
 
+def pick_deadline(n):
+    """Tilbudsfrist, eller ansøgningsfrist ved begrænsede udbud (hvor man først søger om at byde)."""
+    for field, kind in (("deadline-receipt-tender-date-lot", "tender"),
+                        ("deadline-receipt-request-date-lot", "request"),
+                        ("deadline-date-lot", "tender")):
+        dates = sorted(str(d)[:10] for d in (n.get(field) or []) if d)
+        if dates:
+            return dates[0], kind
+    return "", ""
+
+
 def normalize(n):
     pub_no = n.get("publication-number", "")
-    deadlines = sorted(d for d in (n.get("deadline-receipt-tender-date-lot") or []) if d)
+    deadline, deadline_kind = pick_deadline(n)
     value, currency = estimated_value(n)
     return {
         "id": pub_no,
@@ -197,7 +211,9 @@ def normalize(n):
         "buyer": pick_text(n.get("buyer-name")),
         "country": pick_first(n.get("buyer-country")) or "",
         "cpv": n.get("classification-cpv") or [],
-        "deadline": deadlines[0][:10] if deadlines else "",
+        "deadline": deadline,
+        "deadline_kind": deadline_kind,
+        "languages": sorted({str(x).upper() for x in (n.get("submission-language") or []) if x}),
         "value": value,
         "currency": currency or "",
         "procedure": n.get("procedure-type") or "",

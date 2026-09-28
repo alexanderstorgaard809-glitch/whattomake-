@@ -2,11 +2,42 @@
   "name": "Eksempel Digital ApS",
   "website": "",
   "report_language": "da",
-  "countries": ["DNK", "SWE", "NOR", "FIN", "DEU", "NLD"],
+  "countries": [
+    "DNK",
+    "SWE",
+    "NOR",
+    "FIN",
+    "DEU",
+    "NLD"
+  ],
+  "languages": [
+    "DAN",
+    "ENG"
+  ],
   "description": "Small Copenhagen agency (8 people) building websites, web apps and mobile apps for public sector and education. Strong in accessibility (WCAG) and user-centred design.",
-  "services": ["website development", "web applications", "mobile apps", "UX/UI design", "accessibility audits", "maintenance and hosting"],
-  "technologies": ["React", "Next.js", "TypeScript", "Node.js", "WordPress", "Umbraco", "Azure"],
+  "services": [
+    "website development",
+    "web applications",
+    "mobile apps",
+    "UX/UI design",
+    "accessibility audits",
+    "maintenance and hosting"
+  ],
+  "technologies": [
+    "React",
+    "Next.js",
+    "TypeScript",
+    "Node.js",
+    "WordPress",
+    "Umbraco",
+    "Azure"
+  ],
   "size": "8 employees, annual revenue approx. 1 million EUR",
-  "exclude": ["hardware purchases", "large ERP systems", "on-site IT support", "telecom"],
+  "exclude": [
+    "hardware purchases",
+    "large ERP systems",
+    "on-site IT support",
+    "telecom"
+  ],
   "min_score": 60
 }

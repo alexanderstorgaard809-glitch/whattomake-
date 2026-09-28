@@ -48,11 +48,17 @@ SUMMARY_SCHEMA = {
 }
 
 MATCH_SYSTEM = """You help a small company find public tenders worth bidding on.
-Score how well each tender fits the company profile from 0 to 100:
-90-100 = core business, clearly worth bidding; 60-89 = relevant, worth a look;
-30-59 = partially related; 0-29 = not relevant.
-Lower the score if the tender is clearly too big for the company or needs skills it lacks.
-Write the reason in the requested language, max 25 words, concrete and specific."""
+Score how well each tender fits the company profile from 0 to 100. Use the full scale and
+differentiate between tenders - do not give the same score to everything:
+95-100 = service, technologies AND size all match; the company could clearly win this.
+80-94  = core service matches, but technology, size or scope is less certain.
+60-79  = relevant, worth a look.
+30-59  = partially related.
+0-29   = not relevant.
+Lower the score if the tender is clearly too big for the company, is a large framework
+agreement, or needs skills it lacks. Consider estimated value versus company size.
+Write the reason ENTIRELY in the requested language (never mix languages), max 25 words,
+concrete: name what matches and any risk."""
 
 MATCH_SCHEMA = {
     "type": "object",
@@ -76,6 +82,9 @@ MATCH_SCHEMA = {
 }
 
 LANG_NAMES = {"da": "Danish", "en": "English", "de": "German", "sv": "Swedish", "no": "Norwegian"}
+
+# Max score når bureauet ikke kan skrive tilbud på et af de sprog, udbuddet tillader.
+LANGUAGE_CAP = 40
 
 
 def _chunks(items, size):
@@ -107,6 +116,12 @@ def summarize(tenders, llm, cache, log=print):
     return tenders
 
 
+def language_ok(t, profile):
+    """True hvis bureauet kan byde på et af udbuddets sprog (eller hvis vi ikke ved det)."""
+    theirs, ours = set(t.get("languages") or []), {x.upper() for x in profile.get("languages") or []}
+    return not theirs or not ours or bool(theirs & ours)
+
+
 def match(tenders, profile, llm, log=print):
     """Returnerer liste af (udbud, score, begrundelse) sorteret efter score."""
     candidates = [t for t in tenders if t.get("ai")]
@@ -115,6 +130,7 @@ def match(tenders, profile, llm, log=print):
                     f"Services: {', '.join(profile.get('services', []))}\n"
                     f"Technologies: {', '.join(profile.get('technologies', []))}\n"
                     f"Size: {profile.get('size', 'unknown')}\n"
+                    f"Languages they can write bids in: {', '.join(profile.get('languages', [])) or 'unknown'}\n"
                     f"Countries they can work in: {', '.join(profile.get('countries', ['any']))}\n"
                     f"Not interested in: {', '.join(profile.get('exclude', [])) or 'nothing specified'}")
     scored = {}
@@ -123,14 +139,22 @@ def match(tenders, profile, llm, log=print):
         for t in batch:
             a = t["ai"]
             flag = "" if a["small_company_friendly"] else " [likely needs a large supplier]"
-            lines.append(f"- {t['id']} | {t['country']} | {a['work_type']} | {a['title_en']}: "
-                         f"{a['summary_en']} Keywords: {', '.join(a['keywords'])}{flag}")
+            langs = ", ".join(t.get("languages") or []) or "unknown"
+            lines.append(f"- {t['id']} | {t['country']} | bid language: {langs} | value: {format_value(t)} | "
+                         f"{a['work_type']} | {a['title_en']}: {a['summary_en']} "
+                         f"Keywords: {', '.join(a['keywords'])}{flag}")
         user = (f"COMPANY PROFILE\n{profile_text}\n\nWrite reasons in {lang}.\n\n"
                 f"TENDERS\n" + "\n".join(lines))
         result = llm.json_call(MATCH_SYSTEM, user, "tender_scores", MATCH_SCHEMA)
         for item in result.get("items", []):
             scored[item["id"]] = item
         log(f"  batch {i}: {len(batch)} udbud scoret (pris indtil nu: ${llm.total_cost:.4f})")
-    results = [(t, scored[t["id"]]["score"], scored[t["id"]]["reason"])
-               for t in candidates if t["id"] in scored]
+    results = []
+    for t in candidates:
+        if t["id"] not in scored:
+            continue
+        score = int(scored[t["id"]]["score"])
+        if not language_ok(t, profile):
+            score = min(score, LANGUAGE_CAP)
+        results.append((t, score, scored[t["id"]]["reason"]))
     return sorted(results, key=lambda r: r[1], reverse=True)

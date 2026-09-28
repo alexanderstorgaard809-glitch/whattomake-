@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import urllib.request
+from datetime import date
 from pathlib import Path
 
 import analyze
@@ -109,7 +110,10 @@ def cmd_report(args):
         profile = load_json(path, None)
         print(f"\nMatcher udbud til {profile['name']} ...")
         allowed = set(profile.get("countries") or [])
-        pool = [t for t in tenders if not allowed or t["country"] in allowed]
+        today = date.today().isoformat()
+        pool = [t for t in tenders
+                if (not allowed or t["country"] in allowed)
+                and (not t.get("deadline") or t["deadline"] >= today)]  # spring udløbne udbud over
         scored = analyze.match(pool, profile, llm)
         min_score = profile.get("min_score", cfg["min_score"])
         hits = [r for r in scored if r[1] >= min_score][: cfg["max_results_per_report"]]
@@ -163,6 +167,7 @@ def cmd_profile(args):
         "company_profile", PROFILE_SCHEMA,
     )
     profile = {"name": args.name, "website": args.url or "", "report_language": args.lang,
+               "languages": [x.strip().upper() for x in args.languages.split(",") if x.strip()],
                "countries": args.countries.split(",") if args.countries else [], **result}
     slug = re.sub(r"[^a-z0-9]+", "-", args.name.lower()).strip("-")
     path = PROFILES / f"{slug}.json"
@@ -186,6 +191,8 @@ def main():
     s.add_argument("--text", help="Alternativt: indsæt beskrivelse som tekst")
     s.add_argument("--lang", default="da", help="Sprog i rapporten: da eller en")
     s.add_argument("--countries", help="Fx DNK,SWE,NOR,DEU (tom = hele EU)")
+    s.add_argument("--languages", default="DAN,ENG",
+                   help="Sprog bureauet kan skrive tilbud på, fx DAN,ENG,DEU (standard: DAN,ENG)")
     args = p.parse_args()
     if args.cmd == "profile" and not (args.url or args.text):
         p.error("profile kræver --url eller --text")
