@@ -184,7 +184,7 @@ with the same content. Use '[...]' placeholders for anything missing, e.g. bank 
 
 
 def write_letter(llm, claim, calc, language, deadline, sender_note=""):
-    from claims import LANGUAGES, format_money
+    from claims import LANGUAGES, format_money, format_percent
     cur = calc["currency"] if calc["currency"] != "MIXED" else ""
     money = lambda v, c=cur: format_money(v, c, language)
     facts = {
@@ -197,7 +197,7 @@ def write_letter(llm, claim, calc, language, deadline, sender_note=""):
                      for l in calc["lines"]],
         "principal": money(calc["principal"]),
         "statutory_interest_to_date": money(calc["interest"]),
-        "interest_rate_per_year": f"{calc['rate_percent']} %",
+        "interest_rate_per_year": format_percent(calc["rate_percent"], language),
         "daily_interest": money(calc["daily_interest"]),
         "fixed_compensation": money(calc["compensation_eur"], "EUR"),
         "total_amount_due": money(calc["principal"] + calc["interest"] + calc["compensation_eur"])

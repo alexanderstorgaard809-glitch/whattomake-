@@ -167,3 +167,9 @@ def format_money(amount, currency, language="en"):
         return f"{currency} {text}"
     symbol = _SYMBOL.get(currency, currency)
     return f"{symbol} {text}" if before else f"{text} {symbol}"
+
+
+def format_percent(value, language="en"):
+    """Fx 10.4 -> '10.4 %' (en) eller '10,4 %' (fr/de/...)."""
+    decimal = _MONEY.get(language, (".", ",", False))[1]
+    return f"{float(value):g}".replace(".", decimal) + " %"

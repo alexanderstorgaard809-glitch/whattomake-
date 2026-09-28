@@ -73,6 +73,10 @@ class CalcTests(unittest.TestCase):
         self.assertEqual(claims.format_money(8142.26, "EUR", "nl"), "€ 8.142,26")
         self.assertEqual(claims.format_money(1234.5, "SEK", "sv"), "1\u00a0234,50 SEK")
 
+    def test_percent_format(self):
+        self.assertEqual(claims.format_percent(10.4, "fr"), "10,4 %")
+        self.assertEqual(claims.format_percent(10.4, "en"), "10.4 %")
+
     def test_disputed_claim(self):
         c = dict(claim(), disputed=True)
         p = claims.calculate(c, 10.4, today=TODAY)["procedures"]
