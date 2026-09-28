@@ -172,6 +172,13 @@ If the facts contain a dispute raised by the debtor, address it in its own short
 factually, state the creditor's response (e.g. that the issue was fixed and when) and conclude that the
 amount is due. Never admit fault and never invent details.
 
+LANGUAGE RULES (important):
+- Every sentence of the letter must be in the requested language. Facts may be given in English or another
+  language: translate them, including the work description and the next step. Never copy English phrases
+  into a non-English letter. Names, addresses, IBAN and invoice numbers stay unchanged.
+- Write dates in the usual long format of the letter's language (e.g. "28 septembre 2026", "28. September 2026",
+  "28 September 2026"), keeping exactly the same day, month and year as in the facts.
+
 Write the letter natively in the requested language (not a word-for-word translation), then an English version
 with the same content. Use '[...]' placeholders for anything missing, e.g. bank details."""
 
@@ -209,7 +216,27 @@ def write_letter(llm, claim, calc, language, deadline, sender_note=""):
     user = (f"Write the letter in {LANGUAGES.get(language, 'English')}.\n{legal}\n"
             + (f"Additional instruction from the creditor: {sender_note}\n" if sender_note else "")
             + f"FACTS (JSON):\n{json.dumps(facts, ensure_ascii=False, indent=1)}")
-    return llm.json_call(LETTER_SYSTEM, user, "demand_letter", LETTER_SCHEMA)
+    result = llm.json_call(LETTER_SYSTEM, user, "demand_letter", LETTER_SCHEMA)
+    if language != "en":
+        leaked = untranslated(result.get("letter_local", ""), [facts["next_step_if_unpaid"], facts["work_summary"]])
+        if leaked:  # én ny chance med en tydelig besked om, hvad der ikke blev oversat
+            retry = user + ("\n\nYour previous draft copied these English phrases into the "
+                            f"{LANGUAGES.get(language)} letter. Translate them: " + " | ".join(leaked))
+            result = llm.json_call(LETTER_SYSTEM, retry, "demand_letter", LETTER_SCHEMA)
+    return result
+
+
+def untranslated(letter, english_phrases, window=6):
+    """Finder engelske sætningsstykker (6 ord i træk), der er kopieret uoversat ind i brevet."""
+    low, found = letter.lower(), []
+    for phrase in english_phrases:
+        words = (phrase or "").split()
+        for i in range(0, max(len(words) - window + 1, 0)):
+            chunk = " ".join(words[i:i + window]).lower()
+            if chunk in low:
+                found.append(" ".join(words))
+                break
+    return found
 
 
 def _next_step(calc, disputed=False):

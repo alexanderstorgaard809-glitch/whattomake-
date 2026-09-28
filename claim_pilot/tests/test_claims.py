@@ -83,6 +83,14 @@ class CalcTests(unittest.TestCase):
         self.assertNotIn("Payment Order", ai._next_step({"procedures": big}, disputed=True))
         self.assertIn("Payment Order", ai._next_step({"procedures": big}, disputed=False))
 
+    def test_untranslated_detection(self):
+        import ai
+        step = "initiate legal proceedings at the competent court to recover the debt, without further notice"
+        bad = "nous prendrons les dispositions afin de initiate legal proceedings at the competent court to recover"
+        good = "nous engagerons une procédure judiciaire devant la juridiction compétente"
+        self.assertEqual(ai.untranslated(bad, [step]), [step])
+        self.assertEqual(ai.untranslated(good, [step, ""]), [])
+
     def test_language_defaults(self):
         self.assertEqual(claims.default_language("de"), "de")
         self.assertEqual(claims.default_language("IE"), "en")
