@@ -91,18 +91,24 @@ def uk_compensation(amount):
 
 
 def statutory_rate(regime, due, rates, warnings):
-    """Årlig lovbestemt rente i procent for en faktura med forfaldsdato `due`."""
+    """Årlig lovbestemt rente i procent for en faktura med forfaldsdato `due`, plus en præcis forklaring."""
     if regime == "EU":
-        return float(rates["EU"]["percent"])
+        pct = float(rates["EU"]["percent"])
+        return pct, f"statutory rate of {pct:g}% per year (reference rate + 8 percentage points)"
     uk = rates["UK"]
     base_rates = uk["base_rates"]
     key = half_year(due) if due else None
-    if key in base_rates:
-        return base_rates[key] + uk["margin"]
-    latest = sorted(base_rates)[-1]
-    warnings.append(f"No Bank of England reference rate stored for {key or 'this invoice'}; used {latest} "
-                    f"({base_rates[latest]}% + {uk['margin']}%). Check the rate on gov.uk.")
-    return base_rates[latest] + uk["margin"]
+    if key not in base_rates:
+        latest = sorted(base_rates)[-1]
+        warnings.append(f"No Bank of England reference rate stored for {key or 'this invoice'}; used {latest} "
+                        f"({base_rates[latest]}% + {uk['margin']}%). Check the rate on gov.uk.")
+        key = latest
+    year, h = int(key[:4]), key[-1]
+    ref_date = f"31 December {year - 1}" if h == "1" else f"30 June {year}"
+    base = base_rates[key]
+    pct = base + uk["margin"]
+    return pct, (f"{uk['margin']:g}% above the Bank of England base rate of {base:g}% on {ref_date} "
+                 f"(the reference date for this invoice), i.e. {pct:g}% per year")
 
 
 def calculate(claim, rates, today=None, rate_override=None):
@@ -120,8 +126,11 @@ def calculate(claim, rates, today=None, rate_override=None):
         due, assumed = invoice_due_date(inv)
         days_late = max((today - due).days, 0) if due else 0
         applies = b2b and regime is not None and days_late > 0
-        rate = (float(rate_override) if rate_override not in (None, "") else
-                statutory_rate(regime, due, rates, warnings)) if applies else 0.0
+        rate, basis = 0.0, ""
+        if applies and rate_override not in (None, ""):
+            rate, basis = float(rate_override), f"interest rate of {float(rate_override):g}% per year"
+        elif applies:
+            rate, basis = statutory_rate(regime, due, rates, warnings)
         interest = round(amount * rate / 100 * days_late / 365, 2) if applies else 0.0
         if not applies:
             comp = 0
@@ -143,6 +152,7 @@ def calculate(claim, rates, today=None, rate_override=None):
             "currency": (inv.get("currency") or ("GBP" if regime == "UK" else "EUR")).upper(),
             "days_late": days_late,
             "rate_percent": rate,
+            "rate_basis": basis,
             "interest": interest,
             "compensation": comp,
         })

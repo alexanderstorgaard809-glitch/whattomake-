@@ -78,6 +78,8 @@ class CalcTests(unittest.TestCase):
         self.assertEqual([l["compensation"] for l in r["lines"]], [70, 40])  # £70 for £1k-10k, £40 under £1k
         self.assertEqual(r["compensation_currency"], "GBP")
         self.assertEqual(r["lines"][0]["interest"], round(1200 * 0.1175 * 119 / 365, 2))
+        self.assertIn("31 December 2025", r["lines"][0]["rate_basis"])  # forfald i 1. halvår
+        self.assertIn("30 June 2026", r["lines"][1]["rate_basis"])      # forfald i 2. halvår
         p = r["procedures"]
         self.assertTrue(p["uk_claim"])
         self.assertFalse(p["uk_protocol"])

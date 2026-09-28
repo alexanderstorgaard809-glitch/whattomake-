@@ -170,6 +170,8 @@ Layout (use line breaks and blank lines like a real business letter):
   salutation / short paragraphs / an itemised amount overview, one item per line (principal, interest,
   fixed compensation, total) / deadline and bank details on separate lines / consequence / closing /
   signature: the creditor's contact person (if known) on one line and the company name below.
+Voice: if creditor_is_sole_trader is true, write consistently in the first person singular ("I"), otherwise "we".
+Explain the interest rate exactly as given in interest_rate_basis; never call it the "current" rate.
 
 If the facts contain a dispute raised by the debtor, address it in its own short paragraph: acknowledge it
 factually, state the creditor's response (e.g. that the issue was fixed and when) and conclude that the
@@ -201,6 +203,8 @@ def write_letter(llm, claim, calc, language, deadline, sender_note=""):
         "principal": money(calc["principal"]),
         "statutory_interest_to_date": money(calc["interest"]),
         "interest_rate_per_year": format_percent(calc["rate_percent"], language),
+        "interest_rate_basis": sorted({l["rate_basis"] for l in calc["lines"] if l["rate_basis"]}),
+        "creditor_is_sole_trader": claim["creditor"].get("entity_type") == "sole_trader",
         "daily_interest": money(calc["daily_interest"]),
         "fixed_compensation": money(calc["compensation"], calc["compensation_currency"]),
         "total_amount_due": money(calc["principal"] + calc["interest"] + calc["compensation"])
@@ -247,7 +251,9 @@ def _legal_instruction(calc):
     if calc["regime"] == "UK":
         text = ("This is a letter before claim under English law. Cite the Late Payment of Commercial Debts "
                 "(Interest) Act 1998: statutory interest at 8% above the Bank of England base rate and the fixed "
-                "sum compensation per invoice (section 5A). Say the claim will be issued in the County Court.")
+                "sum compensation per invoice (section 5A). Say the claim will be issued in the County Court. "
+                "Invite the debtor to reply in writing before the deadline, either paying or explaining with "
+                "reasons if they dispute any part of the debt, as expected before court proceedings.")
         if calc["procedures"].get("uk_protocol"):
             text += (" The debtor is a sole trader or individual, so the Pre-Action Protocol for Debt Claims applies: "
                      "state that the Information Sheet and Reply Form are enclosed, that the debtor has 30 days to "
