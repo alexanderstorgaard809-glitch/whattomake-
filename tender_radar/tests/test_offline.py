@@ -1,0 +1,90 @@
+"""Offline-test af koden (ingen netværk). Testdata er opdigtet og formet efter TED's API-spec.
+
+Kør: python -m unittest discover tests
+"""
+
+import sys
+import unittest
+from pathlib import Path
+from unittest import mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import analyze  # noqa: E402
+import report  # noqa: E402
+import ted  # noqa: E402
+
+RAW = {
+    "publication-number": "123456-2026",
+    "publication-date": ["2026-09-20+02:00"],
+    "notice-type": "cn-standard",
+    "notice-title": {"nld": "Nieuwe website gemeente", "eng": "New municipal website"},
+    "description-proc": {"nld": "De gemeente zoekt een bureau voor een toegankelijke website."},
+    "buyer-name": {"nld": ["Gemeente Voorbeeld"]},
+    "buyer-country": ["NLD"],
+    "classification-cpv": ["72413000"],
+    "deadline-receipt-tender-date-lot": ["2026-11-14+01:00", "2026-11-10+01:00"],
+    "estimated-value-lot": [100000.0, 50000.0],
+    "estimated-value-cur-lot": ["EUR", "EUR"],
+    "links": {"html": {"ENG": "https://ted.europa.eu/en/notice/-/detail/123456-2026"}},
+}
+
+
+class FakeLLM:
+    total_cost = 0.0
+
+    def json_call(self, system, user, name, schema):
+        ids = [line.split("ID: ")[1] for line in user.splitlines() if line.startswith("ID: ")]
+        if name == "tender_summaries":
+            return {"items": [{"id": i, "title_en": "New municipal website", "summary_en": "Accessible website.",
+                               "work_type": "website", "keywords": ["WCAG"], "small_company_friendly": True}
+                              for i in ids]}
+        ids = [line.split(" | ")[0][2:] for line in user.splitlines() if line.startswith("- ")]
+        return {"items": [{"id": i, "score": 88, "reason": "Passer til jeres webarbejde."} for i in ids]}
+
+
+class OfflineTests(unittest.TestCase):
+    def test_normalize(self):
+        t = ted.normalize(RAW)
+        self.assertEqual(t["title"], "New municipal website")
+        self.assertEqual(t["buyer"], "Gemeente Voorbeeld")
+        self.assertEqual(t["country"], "NLD")
+        self.assertEqual(t["deadline"], "2026-11-10")
+        self.assertEqual((t["value"], t["currency"]), (150000.0, "EUR"))
+        self.assertEqual(t["published"], "2026-09-20")
+
+    def test_query(self):
+        q = ted.build_query(["72000000", "48000000"], 30, ["cn-standard"])
+        self.assertIn("classification-cpv IN (72000000 48000000)", q)
+        self.assertIn("notice-type IN (cn-standard)", q)
+
+    def test_fetch_retries_without_notice_type(self):
+        calls = []
+
+        def fake_search(query, scope, log):
+            calls.append(query)
+            if "notice-type" in query:
+                raise ted.TedError("TED svarede 400: unknown value for notice-type")
+            return [RAW, dict(RAW, **{"publication-number": "2", "notice-type": "can-standard"})]
+
+        with mock.patch.object(ted, "search", side_effect=fake_search):
+            out = ted.fetch(["72000000"], 30, ["cn-standard"], log=lambda *_: None)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual([t["id"] for t in out], ["123456-2026"])
+
+    def test_pipeline_and_report(self):
+        tenders = [ted.normalize(RAW)]
+        cache = {}
+        analyze.summarize(tenders, FakeLLM(), cache, log=lambda *_: None)
+        self.assertIn("123456-2026", cache)
+        profile = {"name": "Test ApS", "description": "web", "report_language": "da"}
+        results = analyze.match(tenders, profile, FakeLLM(), log=lambda *_: None)
+        self.assertEqual(results[0][1], 88)
+        page, md = report.build(profile, results, total=1, days=30)
+        self.assertIn("Holland", page)
+        self.assertIn("150.000 EUR", md)
+        self.assertIn("https://ted.europa.eu/en/notice/-/detail/123456-2026", page)
+
+
+if __name__ == "__main__":
+    unittest.main()
