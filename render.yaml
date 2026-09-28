@@ -26,3 +26,5 @@ services:
         sync: false
       - key: CONTACT_EMAIL
         sync: false
+      - key: STATS_KEY
+        generateValue: true

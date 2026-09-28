@@ -146,13 +146,37 @@ def recalc(payload):
     return {"calc": _calc(claim, payload, config())}
 
 
+# Anonyme tællere til pris-testen: kun hændelsesnavn og antal, ingen IP, cookie eller ID.
+EVENTS = {"calc_result", "letter_19_click"}
+COUNTS = defaultdict(int)
+COUNTS_LOCK = threading.Lock()
+
+
+def event(payload):
+    name = payload.get("event")
+    if name in EVENTS:
+        with COUNTS_LOCK:
+            COUNTS[name] += 1
+        sys.stderr.write(f"  event {name}\n")  # Render-loggen bevarer tallet efter en genstart
+    return {"ok": True}
+
+
+def stats():
+    with COUNTS_LOCK:
+        counts = {k: COUNTS[k] for k in sorted(EVENTS)}
+    views, clicks = counts["calc_result"], counts["letter_19_click"]
+    counts["click_rate"] = round(clicks / views, 3) if views else None
+    return counts
+
+
 def meta(_payload=None):
     rates = config()["rates"]
     return {"countries": {k: v[0] for k, v in sorted(claims.COUNTRIES.items(), key=lambda kv: kv[1][0])},
             "languages": claims.LANGUAGES, "rate_notes": {k: v["note"] for k, v in rates.items()}}
 
 
-ROUTES = {"/api/analyze": analyze, "/api/letter": letter, "/api/recalc": recalc, "/api/meta": meta}
+ROUTES = {"/api/analyze": analyze, "/api/letter": letter, "/api/recalc": recalc, "/api/meta": meta,
+          "/api/event": event}
 AI_ROUTES = {"/api/analyze", "/api/letter"}
 
 
@@ -196,6 +220,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, b"ok", "text/plain")
         if path == "/api/meta":
             return self._json(200, meta())
+        if path == "/api/stats":
+            # Kun for dig: sæt STATS_KEY på Render og åbn /api/stats?key=...
+            key = os.environ.get("STATS_KEY")
+            if key and self.path.endswith("?key=" + key):
+                return self._json(200, stats())
+            return self._json(404, {"error": "Not found"})
         if path in PAGES:
             return self._send(200, render_page(PAGES[path]), "text/html; charset=utf-8")
         if path in ASSETS:

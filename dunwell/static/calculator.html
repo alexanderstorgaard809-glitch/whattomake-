@@ -38,9 +38,24 @@
   .opts div { display: flex; gap: 9px; } .opts .yes .i { color: var(--accent); } .opts .no { color: var(--muted); }
   .opts .i { margin-top: 3px; }
   .note { background: var(--warn-soft); color: var(--warn); border-radius: var(--r-ctl); padding: 10px 12px; font-size: 14px; margin-top: 10px; }
-  .cta { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
-  .cta p { margin: 0 0 12px; font-size: 15px; }
-  .cta .btn { width: 100%; justify-content: center; }
+  .offer { margin-top: 20px; padding: 18px; border-radius: var(--r-box); background: var(--accent-soft); }
+  .offer-head { display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; }
+  .offer-ico { width: 38px; height: 38px; border-radius: var(--r-ctl); display: grid; place-items: center;
+               background: var(--surface); color: var(--accent); font-size: 19px; }
+  .offer-title { margin: 0; font-weight: 650; font-size: 16px; letter-spacing: -0.01em; }
+  .offer-sub { margin: 3px 0 0; font-size: 14px; color: var(--muted); }
+  .offer-btn { width: 100%; justify-content: space-between; margin-top: 16px; padding: 13px 14px 13px 18px; }
+  .offer-btn .price { font-family: var(--mono); font-size: 14px; padding: 4px 10px; border-radius: var(--r-tag);
+                      background: color-mix(in srgb, var(--accent-ink) 14%, transparent); }
+  .offer-fine { margin: 10px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+  .offer-soon { display: grid; grid-template-rows: 0fr; opacity: 0; transform: translateY(-4px);
+                transition: grid-template-rows .45s cubic-bezier(.16,1,.3,1), opacity .3s ease, transform .45s cubic-bezier(.16,1,.3,1); }
+  .offer-soon > div { min-height: 0; overflow: hidden; }
+  .offer-soon.open { grid-template-rows: 1fr; opacity: 1; transform: none; }
+  .offer-soon p { margin: 14px 0 12px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); font-size: 14.5px; }
+  .offer-soon .btn { width: 100%; justify-content: center; background: var(--surface); }
+  @media (prefers-reduced-motion: reduce) { .offer-soon { transition: none; transform: none; } }
+  @media (max-width: 380px) { .offer-btn { white-space: normal; text-align: left; } }
   .explain { max-width: 760px; }
   .explain h2 { font-size: 26px; letter-spacing: -0.02em; margin: 0 0 10px; }
   .explain h3 { font-size: 18px; margin: 26px 0 6px; }
@@ -83,9 +98,24 @@
       <p class="basis" id="basis"></p>
       <div class="opts" id="opts"></div>
       <div id="warn"></div>
-      <div class="cta">
-        <p>Turn this into a formal demand letter in your client's language, ready to send.</p>
-        <a class="btn" href="/app">Write the letter {{icon:arrow-right}}</a>
+      <div class="offer">
+        <div class="offer-head">
+          <span class="offer-ico" aria-hidden="true">{{icon:file-text}}</span>
+          <div>
+            <p class="offer-title" id="offerTitle">Claim it in writing</p>
+            <p class="offer-sub">A formal demand letter in your client's language, with this amount and the legal basis spelled out.</p>
+          </div>
+        </div>
+        <button class="btn offer-btn" id="buy" type="button" aria-expanded="false" aria-controls="soon">
+          <span>Generate the demand letter</span><span class="price">€19</span>
+        </button>
+        <p class="offer-fine">One letter, one payment. No subscription.</p>
+        <div class="offer-soon" id="soon" role="status" inert>
+          <div>
+            <p><b>Paid letters are not live yet.</b> Your click tells us this is worth building. While we test, you can write the letter for free in the demo.</p>
+            <a class="btn ghost" href="/app">Try the demo {{icon:arrow-right}}</a>
+          </div>
+        </div>
       </div>
     </aside>
   </div>
@@ -172,9 +202,26 @@ function update() {
   }, 120);
 }
 
+// Anonymous totals for the price test: an event name only, no identifier or cookie.
+const sent = new Set();
+function track(name) {
+  if (sent.has(name)) return;
+  sent.add(name);
+  fetch("/api/event", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: name }), keepalive: true }).catch(() => {});
+}
+$("#buy").onclick = () => {
+  track("letter_19_click");
+  $("#soon").classList.add("open"); $("#soon").inert = false;
+  $("#buy").setAttribute("aria-expanded", "true");
+};
+
 function render(c) {
   const same = c.currency === c.compensation_currency;
-  $("#total").textContent = same ? money(c.principal + c.interest + c.compensation, c.currency) : money(c.principal + c.interest, c.currency);
+  const total = same ? money(c.principal + c.interest + c.compensation, c.currency) : money(c.principal + c.interest, c.currency);
+  $("#total").textContent = total;
+  $("#offerTitle").textContent = c.principal > 0 ? `Claim ${total} in writing` : "Claim it in writing";
+  if (c.principal > 0) track("calc_result");
   $("#breakdown").innerHTML = `
     <div><span>Unpaid invoices</span><span class="num">${money(c.principal, c.currency)}</span></div>
     <div><span>Statutory interest to date</span><span class="num">${money(c.interest, c.currency)}</span></div>
