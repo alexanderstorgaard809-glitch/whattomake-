@@ -9,7 +9,8 @@ Det er værktøjet til at teste idéen: *"Ville I betale 49 USD om måneden for 
 ```
 TED API (gratis)  →  1. fetch      Henter alle aktive IT-udbud fra de seneste 30 dage
                   →  2. summarize  AI oversætter og opsummerer hvert udbud på engelsk (én gang, gemmes)
-                  →  3. report     AI scorer udbuddene 0-100 mod hvert bureaus profil
+                  →  3. report     Billig AI sorterer alle udbud mod bureauets profil,
+                                   stærkere AI læser de mest lovende i fuld tekst og giver endelig score
                   →  output/<bureau>.html  (klar til at kopiere ind i en mail)
 ```
 
@@ -48,16 +49,22 @@ Mail-skabelon, tips til at finde bureauer og en tracker til svarene ligger i [`o
 
 ## Valg af AI-model
 
-| Model (OpenRouter-id) | Pris pr. 1 mio. tokens (ind / ud) | Rolle |
-|---|---|---|
-| `google/gemini-3.1-flash-lite` | 0,25 / 1,50 USD | **Standard.** Stabil udgave, stærk i alle EU-sprog, hurtig, 1M kontekst |
-| `google/gemini-2.5-flash-lite` | 0,10 / 0,40 USD | Automatisk reserve, hvis den første fejler |
+To modeller, hver til det den er bedst til:
 
-Hvorfor den: Opgaven er oversættelse fra 24 sprog, opsummering og simpel vurdering. Det kræver ikke en dyr model, men den skal kunne europæiske sprog godt og levere pålidelig JSON. Gemini Flash Lite er bygget til netop store mængder af den slags opgaver. Priserne er fra OpenRouter i september 2026, så tjek dem på https://openrouter.ai/models.
+| Trin | Model (OpenRouter-id) | Pris pr. 1 mio. tokens (ind / ud) | Hvorfor |
+|---|---|---|---|
+| Opsummering + første sortering | `google/gemini-3.1-flash-lite` (reserve: `gemini-2.5-flash-lite`) | 0,25 / 1,50 USD | Tusindvis af udbud på 24 sprog. Skal være billig, hurtig og god til sprog |
+| Grundig vurdering af top ~80 | `google/gemini-3.8-flash` (reserve: `gemini-3.7-flash`) | 0,75 / 3,75 USD | Læser hele udbudsteksten og vurderer som en erfaren tilbudsansvarlig |
 
-Vil du prøve en anden model, fx en DeepSeek- eller Qwen-model, ændrer du `"models"` i `config.json`.
+Den grundige vurdering skelner mellem udviklingsopgaver og køb af færdige produkter. Den har også hårde lofter:
+- Udbud, der rammer bureauets "ikke interesseret"-liste, får højst 25 %.
+- Køb af færdigt produkt/licens får højst 50 %, med mindre profilen har `"sells_products": true`.
+- For store opgaver (værdi, varighed, krav) får højst 55 %.
+- Hvis bureauet ikke kan skrive tilbud på udbuddets sprog, får udbuddet højst 40 %.
 
-**Forventet pris:** Første kørsel koster typisk 1-3 USD for opsummering af et par tusinde udbud. Derefter koster det ca. 0,20 USD pr. bureau. Skriptet udskriver den faktiske pris efter hver kørsel.
+Priserne er fra OpenRouter i september 2026, så tjek dem på https://openrouter.ai/models. Du kan skifte model med `"models"` og `"rerank_models"` i `config.json`.
+
+**Forventet pris:** Første kørsel koster typisk 1-3 USD for opsummering af et par tusinde udbud. Derefter koster det ca. 0,10-0,30 USD pr. bureau. Skriptet udskriver den faktiske pris efter hver kørsel.
 
 ## Indstillinger (`config.json`)
 
@@ -65,6 +72,7 @@ Vil du prøve en anden model, fx en DeepSeek- eller Qwen-model, ændrer du `"mod
 - `days_back`: hvor langt tilbage der hentes (standard 30 dage).
 - `scope`: `ACTIVE` henter kun udbud, der stadig er åbne.
 - `min_score`: laveste score, der kommer med i rapporten (standard 60).
+- `rerank_min_score` / `rerank_max`: hvilke udbud fra første sortering der får en grundig vurdering (standard: score 50+, højst 80).
 
 ## Test
 

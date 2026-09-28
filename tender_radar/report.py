@@ -17,7 +17,7 @@ TEXT = {
         "heading": "{n} relevante offentlige udbud til {name}",
         "intro": "Vi har gennemgået {total} nye IT-udbud i EU fra de seneste {days} dage og fundet dem, der passer bedst til jer.",
         "buyer": "Køber", "deadline": "Tilbudsfrist", "request": "Frist for ansøgning", "value": "Anslået værdi",
-        "fit": "Match", "lang": "Tilbudssprog",
+        "fit": "Match", "lang": "Tilbudssprog", "type": "Type",
         "unknown": "ikke oplyst", "open": "Se udbuddet på TED",
         "footer": "Genereret {today} ud fra offentlige data fra TED (ted.europa.eu). Tjek altid det originale udbudsmateriale.",
         "none": "Ingen udbud over tærsklen i denne periode.",
@@ -26,7 +26,7 @@ TEXT = {
         "heading": "{n} relevant public tenders for {name}",
         "intro": "We reviewed {total} new IT tenders across the EU from the last {days} days and picked the best fits for you.",
         "buyer": "Buyer", "deadline": "Deadline", "request": "Application deadline", "value": "Estimated value",
-        "fit": "Match", "lang": "Bid language",
+        "fit": "Match", "lang": "Bid language", "type": "Type",
         "unknown": "not stated", "open": "View tender on TED",
         "footer": "Generated {today} from public TED data (ted.europa.eu). Always check the original tender documents.",
         "none": "No tenders above the threshold in this period.",
@@ -41,6 +41,18 @@ LANGUAGES = {
     "en": {"DAN": "Danish", "ENG": "English", "DEU": "German", "SWE": "Swedish", "NOR": "Norwegian",
            "FIN": "Finnish", "NLD": "Dutch", "FRA": "French", "POL": "Polish", "SPA": "Spanish"},
 }
+
+
+PURCHASE_TYPES = {
+    "da": {"custom development": "udvikling", "ready-made product or licence": "køb af færdigt produkt/licens",
+           "operations or support": "drift og support", "consulting or staffing": "konsulentbistand",
+           "hardware": "hardware", "mixed": "blandet"},
+}
+
+
+def _type(t, lang):
+    pt = t.get("purchase_type")
+    return PURCHASE_TYPES.get(lang, {}).get(pt, pt) if pt else ""
 
 
 def _langs(t, tx, lang):
@@ -78,6 +90,7 @@ def build(profile, results, total, days):
             f"- **{tx['buyer']}:** {_buyer(t)} ({country_name(t['country'])})",
             f"- **{_deadline_label(t, tx)}:** {t['deadline'] or tx['unknown']}",
             f"- **{tx['lang']}:** {_langs(t, tx, lang)}",
+            f"- **{tx['type']}:** {_type(t, lang) or tx['unknown']}",
             f"- **{tx['value']}:** {_value(t, tx)}",
             f"- {a['summary_en']}",
             f"- *{reason}*",
@@ -102,6 +115,7 @@ def build(profile, results, total, days):
     <b>{tx['buyer']}:</b> {e(_buyer(t))} ({e(country_name(t['country']))}) &nbsp;·&nbsp;
     <b>{e(_deadline_label(t, tx))}:</b> {e(t['deadline'] or tx['unknown'])} &nbsp;·&nbsp;
     <b>{tx['lang']}:</b> {e(_langs(t, tx, lang))} &nbsp;·&nbsp;
+    <b>{tx['type']}:</b> {e(_type(t, lang) or tx['unknown'])} &nbsp;·&nbsp;
     <b>{tx['value']}:</b> {e(_value(t, tx))}
   </div>
   <div style="font-size:14px;margin-bottom:8px">{e(a['summary_en'])}</div>

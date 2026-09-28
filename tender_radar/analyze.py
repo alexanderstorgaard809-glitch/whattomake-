@@ -126,13 +126,7 @@ def match(tenders, profile, llm, log=print):
     """Returnerer liste af (udbud, score, begrundelse) sorteret efter score."""
     candidates = [t for t in tenders if t.get("ai")]
     lang = LANG_NAMES.get(profile.get("report_language", "en"), "English")
-    profile_text = (f"Company: {profile['name']}\nDescription: {profile['description']}\n"
-                    f"Services: {', '.join(profile.get('services', []))}\n"
-                    f"Technologies: {', '.join(profile.get('technologies', []))}\n"
-                    f"Size: {profile.get('size', 'unknown')}\n"
-                    f"Languages they can write bids in: {', '.join(profile.get('languages', [])) or 'unknown'}\n"
-                    f"Countries they can work in: {', '.join(profile.get('countries', ['any']))}\n"
-                    f"Not interested in: {', '.join(profile.get('exclude', [])) or 'nothing specified'}")
+    profile_text = _profile_text(profile)
     scored = {}
     for i, batch in enumerate(_chunks(candidates, MATCH_BATCH), 1):
         lines = []
@@ -157,4 +151,110 @@ def match(tenders, profile, llm, log=print):
         if not language_ok(t, profile):
             score = min(score, LANGUAGE_CAP)
         results.append((t, score, scored[t["id"]]["reason"]))
+    return sorted(results, key=lambda r: r[1], reverse=True)
+
+
+# ---------------- Trin 3: grundig vurdering med stærkere model ----------------
+
+RERANK_BATCH = 8
+
+RERANK_SYSTEM = """You are an experienced bid manager advising a small company on which public tenders to bid for.
+You get the company profile and the ORIGINAL tender text (any EU language) plus an English summary.
+Read the original text carefully and judge realistically, like a sceptical expert:
+
+1. purchase_type: is the buyer paying for custom development work, or buying a ready-made
+   product/licence/SaaS, operations/support, consulting/staffing, hardware, or a mix?
+2. conflicts_with_exclusions: true if a substantial part of the tender is something the company
+   says it is NOT interested in (e.g. hardware, ERP, on-site support).
+3. too_big: true if the value, duration, turnover requirements or scope are clearly beyond the
+   company's size (e.g. huge multi-year frameworks, large references required).
+4. score 0-100 using the full scale, and differentiate:
+   95-100 only if service, technologies, sector AND size all fit and the company could realistically win;
+   80-94 strong fit with one uncertainty; 60-79 relevant but clear risks; below 60 not worth it.
+   A shared sector (e.g. education) alone is NOT a match - the work itself must fit.
+5. reason: ENTIRELY in the requested language, max 30 words: what fits and the main risk."""
+
+PURCHASE_TYPES = ["custom development", "ready-made product or licence", "operations or support",
+                  "consulting or staffing", "hardware", "mixed"]
+
+RERANK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "purchase_type": {"type": "string", "enum": PURCHASE_TYPES},
+                    "conflicts_with_exclusions": {"type": "boolean"},
+                    "too_big": {"type": "boolean"},
+                    "score": {"type": "integer"},
+                    "reason": {"type": "string"},
+                },
+                "required": ["id", "purchase_type", "conflicts_with_exclusions", "too_big", "score", "reason"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["items"],
+    "additionalProperties": False,
+}
+
+# Hårde lofter, så AI'en ikke kan "overtale" sig selv til en høj score.
+CAP_EXCLUDED = 25
+CAP_PRODUCT = 50   # køb af færdigt produkt, når bureauet ikke sælger egne produkter
+CAP_TOO_BIG = 55
+
+
+def apply_caps(score, item, t, profile):
+    if item["conflicts_with_exclusions"]:
+        score = min(score, CAP_EXCLUDED)
+    if item["purchase_type"] in ("ready-made product or licence", "hardware") and not profile.get("sells_products"):
+        score = min(score, CAP_PRODUCT)
+    if item["too_big"]:
+        score = min(score, CAP_TOO_BIG)
+    if not language_ok(t, profile):
+        score = min(score, LANGUAGE_CAP)
+    return score
+
+
+def _profile_text(profile):
+    return (f"Company: {profile['name']}\nDescription: {profile['description']}\n"
+            f"Services: {', '.join(profile.get('services', []))}\n"
+            f"Technologies: {', '.join(profile.get('technologies', []))}\n"
+            f"Size: {profile.get('size', 'unknown')}\n"
+            f"Sells its own software products: {'yes' if profile.get('sells_products') else 'no'}\n"
+            f"Languages they can write bids in: {', '.join(profile.get('languages', [])) or 'unknown'}\n"
+            f"NOT interested in: {', '.join(profile.get('exclude', [])) or 'nothing specified'}")
+
+
+def rerank(first_pass, profile, llm, min_first_score=50, max_items=80, log=print):
+    """Genvurderer de bedste udbud fra første runde med en stærkere model og hele udbudsteksten.
+
+    Returnerer (udbud, score, begrundelse) for de genvurderede udbud; udbud['purchase_type'] sættes.
+    """
+    todo = [t for t, score, _ in first_pass if score >= min_first_score][:max_items]
+    lang = LANG_NAMES.get(profile.get("report_language", "en"), "English")
+    log(f"  grundig vurdering af de {len(todo)} mest lovende med {llm.models[0]} ...")
+    results = []
+    for i, batch in enumerate(_chunks(todo, RERANK_BATCH), 1):
+        blocks = []
+        for t in batch:
+            a = t["ai"]
+            langs = ", ".join(t.get("languages") or []) or "unknown"
+            blocks.append(f"{_tender_text(t)}\nBid languages: {langs}\n"
+                          f"Procedure: {t.get('procedure') or 'unknown'}\n"
+                          f"English summary: {a['title_en']}. {a['summary_en']}")
+        user = (f"COMPANY PROFILE\n{_profile_text(profile)}\n\nWrite reasons in {lang}.\n\n"
+                "TENDERS\n\n" + "\n\n---\n\n".join(blocks))
+        result = llm.json_call(RERANK_SYSTEM, user, "tender_assessment", RERANK_SCHEMA)
+        by_id = {item["id"]: item for item in result.get("items", [])}
+        for t in batch:
+            item = by_id.get(t["id"])
+            if not item:
+                continue
+            score = apply_caps(int(item["score"]), item, t, profile)
+            results.append((dict(t, purchase_type=item["purchase_type"]), score, item["reason"]))
+        log(f"  batch {i}: {len(by_id)}/{len(batch)} vurderet (pris indtil nu: ${llm.total_cost:.4f})")
     return sorted(results, key=lambda r: r[1], reverse=True)

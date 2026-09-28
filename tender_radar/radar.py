@@ -105,6 +105,7 @@ def cmd_report(args):
     for t in tenders:
         t["ai"] = cache.get(t["id"])
     llm = make_llm(cfg)
+    strong = llm_mod.OpenRouter(cfg.get("rerank_models") or cfg["models"])
     OUTPUT.mkdir(exist_ok=True)
     for path in profile_paths(args.profile):
         profile = load_json(path, None)
@@ -114,7 +115,10 @@ def cmd_report(args):
         pool = [t for t in tenders
                 if (not allowed or t["country"] in allowed)
                 and (not t.get("deadline") or t["deadline"] >= today)]  # spring udløbne udbud over
-        scored = analyze.match(pool, profile, llm)
+        first_pass = analyze.match(pool, profile, llm)
+        scored = analyze.rerank(first_pass, profile, strong,
+                                min_first_score=cfg.get("rerank_min_score", 50),
+                                max_items=cfg.get("rerank_max", 80))
         min_score = profile.get("min_score", cfg["min_score"])
         hits = [r for r in scored if r[1] >= min_score][: cfg["max_results_per_report"]]
         page, md = report.build(profile, hits, total=len(pool), days=data["days"])
@@ -123,7 +127,8 @@ def cmd_report(args):
         print(f"  {len(hits)} udbud med score >= {min_score} -> output/{path.stem}.html")
         for t, score, reason in hits[:5]:
             print(f"   {score:3d}%  {t['country']}  {t['ai']['title_en'][:70]}")
-    print(f"\nPris for matching: ${llm.total_cost:.4f}")
+    print(f"\nPris: ${llm.total_cost:.4f} (hurtig sortering) + ${strong.total_cost:.4f} (grundig vurdering)"
+          f" = ${llm.total_cost + strong.total_cost:.4f}")
 
 
 def cmd_run(args):
@@ -168,6 +173,7 @@ def cmd_profile(args):
     )
     profile = {"name": args.name, "website": args.url or "", "report_language": args.lang,
                "languages": [x.strip().upper() for x in args.languages.split(",") if x.strip()],
+               "sells_products": args.sells_products,
                "countries": args.countries.split(",") if args.countries else [], **result}
     slug = re.sub(r"[^a-z0-9]+", "-", args.name.lower()).strip("-")
     path = PROFILES / f"{slug}.json"
@@ -193,6 +199,8 @@ def main():
     s.add_argument("--countries", help="Fx DNK,SWE,NOR,DEU (tom = hele EU)")
     s.add_argument("--languages", default="DAN,ENG",
                    help="Sprog bureauet kan skrive tilbud på, fx DAN,ENG,DEU (standard: DAN,ENG)")
+    s.add_argument("--sells-products", action="store_true",
+                   help="Bureauet sælger egne softwareprodukter/licenser (ellers trækkes produktkøb ned)")
     args = p.parse_args()
     if args.cmd == "profile" and not (args.url or args.text):
         p.error("profile kræver --url eller --text")

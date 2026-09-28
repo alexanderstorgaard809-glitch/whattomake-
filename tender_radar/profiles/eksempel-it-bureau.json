@@ -39,5 +39,6 @@
     "on-site IT support",
     "telecom"
   ],
+  "sells_products": false,
   "min_score": 60
 }

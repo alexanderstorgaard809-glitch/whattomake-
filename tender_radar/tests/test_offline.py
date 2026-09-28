@@ -43,6 +43,20 @@ class FakeLLM:
         return {"items": [{"id": i, "score": 88, "reason": "Passer til jeres webarbejde."} for i in ids]}
 
 
+class FakeStrongLLM:
+    total_cost = 0.0
+    models = ["fake-strong"]
+
+    def __init__(self, **item):
+        self.item = item
+
+    def json_call(self, system, user, name, schema):
+        ids = [line.split("ID: ")[1] for line in user.splitlines() if line.startswith("ID: ")]
+        base = {"purchase_type": "custom development", "conflicts_with_exclusions": False,
+                "too_big": False, "score": 92, "reason": "God match."}
+        return {"items": [dict(base, id=i, **self.item) for i in ids]}
+
+
 class OfflineTests(unittest.TestCase):
     def test_normalize(self):
         t = ted.normalize(RAW)
@@ -80,6 +94,24 @@ class OfflineTests(unittest.TestCase):
         profile = {"name": "X", "description": "web", "languages": ["DAN", "ENG"]}
         results = analyze.match(tenders, profile, FakeLLM(), log=lambda *_: None)
         self.assertEqual(results[0][1], analyze.LANGUAGE_CAP)
+
+    def test_rerank_caps(self):
+        t = ted.normalize(RAW)
+        analyze.summarize([t], FakeLLM(), {}, log=lambda *_: None)
+        profile = {"name": "X", "description": "web", "languages": ["ENG"]}
+        first = [(t, 70, "x"), (dict(t, id="low"), 30, "y")]
+        cases = [({}, 92), ({"conflicts_with_exclusions": True}, analyze.CAP_EXCLUDED),
+                 ({"purchase_type": "ready-made product or licence"}, analyze.CAP_PRODUCT),
+                 ({"too_big": True}, analyze.CAP_TOO_BIG)]
+        for item, expected in cases:
+            out = analyze.rerank(first, profile, FakeStrongLLM(**item), min_first_score=50, log=lambda *_: None)
+            self.assertEqual(len(out), 1)  # udbud under 50 i første runde genvurderes ikke
+            self.assertEqual(out[0][1], expected, item)
+        out = analyze.rerank(first, dict(profile, sells_products=True),
+                             FakeStrongLLM(purchase_type="ready-made product or licence"), log=lambda *_: None)
+        self.assertEqual(out[0][1], 92)
+        page, md = report.build(dict(profile, report_language="da"), out, total=1, days=30)
+        self.assertIn("køb af færdigt produkt/licens", md)
 
     def test_query(self):
         q = ted.build_query(["72000000", "48000000"], 30, ["cn-standard"])
