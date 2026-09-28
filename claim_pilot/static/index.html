@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claim Pilot</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dde1e8;
+    --accent: #2f5bea; --accent-text: #ffffff; --ok: #1a7f4b; --warn: #9a6200; --warn-bg: #fff6e0;
+    --bad: #b42318; --soft: #eef2fd;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b1f27; --text: #e6e9ef; --muted: #9aa3b2; --line: #2d333f;
+      --accent: #6f8ff7; --accent-text: #0d1016; --ok: #4cc38a; --warn: #f0b64a; --warn-bg: #2a2416;
+      --bad: #ff7a70; --soft: #222a3d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .step { display: inline-block; background: var(--soft); color: var(--accent); font-weight: 600;
+          border-radius: 999px; padding: 2px 10px; font-size: 13px; margin-bottom: 8px; }
+  #drop { border: 2px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center; cursor: pointer; color: var(--muted); }
+  #drop.over { border-color: var(--accent); background: var(--soft); }
+  #fileList { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+         background: var(--card); color: var(--text); font: inherit; }
+  textarea { min-height: 70px; resize: vertical; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .check { display: flex; gap: 8px; align-items: center; margin-top: 8px; color: var(--text); font-size: 14px; }
+  .check input { width: auto; }
+  button { background: var(--accent); color: var(--accent-text); border: 0; border-radius: 8px; padding: 10px 18px;
+           font: inherit; font-weight: 600; cursor: pointer; margin-top: 14px; }
+  button.secondary { background: var(--soft); color: var(--accent); }
+  button:disabled { opacity: .5; cursor: wait; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td input { padding: 5px 6px; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+  .tile { background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+  .tile b { display: block; font-size: 19px; font-variant-numeric: tabular-nums; }
+  .tile span { font-size: 12px; color: var(--muted); }
+  .note { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 8px 12px; margin: 8px 0 0; font-size: 14px; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  ul.plain { margin: 6px 0 0; padding-left: 18px; }
+  pre { white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px;
+        font: 14px/1.55 Georgia, "Times New Roman", serif; margin: 8px 0 0; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .error { color: var(--bad); margin-top: 10px; }
+  .hidden { display: none; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Claim Pilot</h1>
+  <p class="sub">Get paid by clients in other EU countries: upload the unpaid invoice, get a legally grounded demand letter in your client's language, and see which EU court procedure you can use next.</p>
+
+  <section class="card">
+    <div class="step">Step 1</div>
+    <h2>Upload the invoice and any emails</h2>
+    <div id="drop">Drop files here or click to choose<br><small>PDF, photo/screenshot or .txt/.eml. Several files are fine.</small></div>
+    <input id="fileInput" type="file" multiple accept=".pdf,image/*,.txt,.eml" class="hidden">
+    <ul id="fileList"></ul>
+    <label for="notes">Anything else we should know? (optional)</label>
+    <textarea id="notes" placeholder="E.g. 'Client stopped answering after I delivered the website in May. I sent two reminders.'"></textarea>
+    <button id="analyzeBtn">Analyse claim</button>
+    <div id="analyzeErr" class="error"></div>
+  </section>
+
+  <section id="review" class="card hidden">
+    <div class="step">Step 2</div>
+    <h2>Check the details</h2>
+    <div class="grid">
+      <div>
+        <strong>You (creditor)</strong>
+        <label>Name</label><input data-f="creditor.name">
+        <label>Country</label><select data-f="creditor.country" class="countries"></select>
+        <label class="check"><input type="checkbox" data-f="creditor.is_business"> Business / self-employed</label>
+        <label>Bank details for payment</label><input data-f="creditor_bank" placeholder="IBAN / BIC">
+      </div>
+      <div>
+        <strong>Client (debtor)</strong>
+        <label>Name</label><input data-f="debtor.name">
+        <label>Country</label><select data-f="debtor.country" class="countries"></select>
+        <label class="check"><input type="checkbox" data-f="debtor.is_business"> Business</label>
+        <label>Address</label><input data-f="debtor.address">
+      </div>
+    </div>
+
+    <label style="margin-top:18px">Invoices</label>
+    <table>
+      <thead><tr><th>Invoice no.</th><th>Issue date</th><th>Due date</th><th class="num">Amount</th><th>Cur.</th></tr></thead>
+      <tbody id="invoiceRows"></tbody>
+    </table>
+
+    <label for="rate">Statutory late-payment interest (% per year)</label>
+    <input id="rate" type="number" step="0.01" style="max-width:140px">
+    <div id="rateNote" class="sub" style="font-size:12px;margin:4px 0 0"></div>
+
+    <div class="totals" id="totals"></div>
+    <div id="dispute"></div>
+    <div id="warnings"></div>
+
+    <h2 style="margin-top:20px">Your options</h2>
+    <div id="procedures"></div>
+  </section>
+
+  <section id="letterCard" class="card hidden">
+    <div class="step">Step 3</div>
+    <h2>Final demand letter</h2>
+    <div class="grid">
+      <div><label for="lang">Letter language (client's language)</label><select id="lang"></select></div>
+      <div><label for="note">Extra instruction (optional)</label><input id="note" placeholder="E.g. 'mention the project name ACME redesign'"></div>
+    </div>
+    <button id="letterBtn">Write demand letter</button>
+    <div id="letterErr" class="error"></div>
+    <div id="letterOut" class="hidden">
+      <p class="sub" id="deadlineInfo" style="margin:14px 0 0"></p>
+      <h3 id="localTitle" style="margin:16px 0 0;font-size:15px"></h3>
+      <pre id="letterLocal"></pre>
+      <div class="row"><button class="secondary" data-copy="letterLocal">Copy</button><button class="secondary" data-dl="letterLocal">Download .txt</button></div>
+      <h3 style="margin:18px 0 0;font-size:15px">English version (for your records)</h3>
+      <pre id="letterEn"></pre>
+      <div class="row"><button class="secondary" data-copy="letterEn">Copy</button><button class="secondary" data-dl="letterEn">Download .txt</button></div>
+    </div>
+  </section>
+
+  <p id="cost" class="sub" style="font-size:12px"></p>
+  <footer>Claim Pilot is a self-help tool, not legal advice. Check amounts, dates and the rules in the debtor's country before sending. Statutory interest under Directive 2011/7/EU applies between businesses.</footer>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let files = [], state = null, meta = null, totalCost = 0;
+
+const fmt = (n, cur) => (cur && cur !== "MIXED" ? cur + " " : "") +
+  Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function api(path, body) {
+  const res = await fetch(path, { method: body ? "POST" : "GET", headers: { "Content-Type": "application/json" },
+                                  body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  if (data.cost) { totalCost += data.cost; $("#cost").textContent = `AI cost this session: $${totalCost.toFixed(4)}`; }
+  return data;
+}
+
+// ---------- step 1: files ----------
+const drop = $("#drop"), input = $("#fileInput");
+drop.onclick = () => input.click();
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); };
+input.onchange = () => addFiles(input.files);
+
+function addFiles(list) {
+  for (const f of list) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      let url = reader.result;
+      if (/\.(txt|eml)$/i.test(f.name)) url = url.replace(/^data:[^;]*;/, "data:text/plain;");
+      files.push({ name: f.name, data_url: url });
+      $("#fileList").innerHTML = files.map((x) => `<li>${esc(x.name)}</li>`).join("");
+    };
+    reader.readAsDataURL(f);
+  }
+}
+
+$("#analyzeBtn").onclick = async () => {
+  if (!files.length && !$("#notes").value.trim()) { $("#analyzeErr").textContent = "Add at least one file."; return; }
+  const btn = $("#analyzeBtn"); btn.disabled = true; btn.textContent = "Reading documents…"; $("#analyzeErr").textContent = "";
+  try {
+    state = await api("/api/analyze", { files, notes: $("#notes").value });
+    renderReview();
+  } catch (e) { $("#analyzeErr").textContent = e.message; }
+  btn.disabled = false; btn.textContent = "Analyse claim";
+};
+
+// ---------- step 2: review ----------
+function get(obj, path) { return path.split(".").reduce((o, k) => (o || {})[k], obj); }
+function set(obj, path, v) { const ks = path.split("."); const last = ks.pop(); ks.reduce((o, k) => (o[k] ??= {}), obj)[last] = v; }
+
+function renderReview() {
+  const c = state.claim;
+  document.querySelectorAll("select.countries").forEach((s) => {
+    s.innerHTML = `<option value="">– choose –</option>` +
+      Object.entries(meta.countries).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+  });
+  document.querySelectorAll("[data-f]").forEach((el) => {
+    const v = get(c, el.dataset.f);
+    if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? "";
+    el.onchange = () => { set(c, el.dataset.f, el.type === "checkbox" ? el.checked : el.value);
+                          if (el.dataset.f === "debtor.country") setLang(); recalc(); };
+  });
+  $("#invoiceRows").innerHTML = c.invoices.map((inv, i) => `<tr>
+      <td><input data-i="${i}" data-k="number" value="${esc(inv.number)}"></td>
+      <td><input data-i="${i}" data-k="issue_date" type="date" value="${esc(inv.issue_date)}"></td>
+      <td><input data-i="${i}" data-k="due_date" type="date" value="${esc(inv.due_date)}"></td>
+      <td><input data-i="${i}" data-k="amount" type="number" step="0.01" class="num" value="${inv.amount}"></td>
+      <td><input data-i="${i}" data-k="currency" value="${esc(inv.currency)}" style="max-width:64px"></td></tr>`).join("");
+  document.querySelectorAll("#invoiceRows input").forEach((el) => el.onchange = () => {
+    c.invoices[el.dataset.i][el.dataset.k] = el.dataset.k === "amount" ? parseFloat(el.value) || 0 : el.value; recalc(); });
+  $("#rate").value = state.rate_percent; $("#rate").onchange = recalc;
+  $("#dispute").innerHTML = c.dispute_signals ? `<p class="note"><b>Possible dispute:</b> ${esc(c.dispute_signals)} – if the client contests the work, the payment order is less suitable; small claims still works.</p>` : "";
+  $("#lang").innerHTML = Object.entries(meta.languages).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+  $("#lang").value = state.language || "en";
+  renderCalc(state.calc);
+  $("#review").classList.remove("hidden"); $("#letterCard").classList.remove("hidden");
+  $("#review").scrollIntoView({ behavior: "smooth" });
+}
+
+function setLang() {
+  const map = { AT:"de",BE:"fr",BG:"bg",HR:"hr",CY:"el",CZ:"cs",DK:"da",EE:"et",FI:"fi",FR:"fr",DE:"de",GR:"el",HU:"hu",
+    IE:"en",IT:"it",LV:"lv",LT:"lt",LU:"fr",MT:"en",NL:"nl",PL:"pl",PT:"pt",RO:"ro",SK:"sk",SI:"sl",ES:"es",SE:"sv" };
+  $("#lang").value = map[state.claim.debtor.country] || "en";
+}
+
+async function recalc() {
+  try { const r = await api("/api/recalc", { claim: state.claim, rate_percent: $("#rate").value }); renderCalc(r.calc); }
+  catch (e) { $("#analyzeErr").textContent = e.message; }
+}
+
+function renderCalc(calc) {
+  state.calc = calc;
+  const cur = calc.currency;
+  $("#totals").innerHTML = `
+    <div class="tile"><span>Unpaid invoices</span><b>${fmt(calc.principal, cur)}</b></div>
+    <div class="tile"><span>Statutory interest to date</span><b>${fmt(calc.interest, cur)}</b></div>
+    <div class="tile"><span>Fixed compensation</span><b>${fmt(calc.compensation_eur, "EUR")}</b></div>
+    <div class="tile"><span>Interest per day from now</span><b>${fmt(calc.daily_interest, cur)}</b></div>`;
+  $("#warnings").innerHTML = calc.warnings.map((w) => `<p class="note">${esc(w)}</p>`).join("");
+  const p = calc.procedures;
+  const mark = (ok) => ok ? `<span class="ok">✓ available</span>` : `<span class="bad">✗ not available</span>`;
+  $("#procedures").innerHTML = `
+    <table><tbody>
+      <tr><td>1. Final demand letter (step 3)</td><td><span class="ok">✓ always</span></td></tr>
+      <tr><td>2. European Payment Order</td><td>${mark(p.payment_order)}</td></tr>
+      <tr><td>3. European Small Claims Procedure</td><td>${mark(p.small_claims)}</td></tr>
+    </tbody></table>
+    <ul class="plain">${p.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>`;
+  $("#rateNote").textContent = meta.rate_note;
+}
+
+// ---------- step 3: letter ----------
+$("#letterBtn").onclick = async () => {
+  const btn = $("#letterBtn"); btn.disabled = true; btn.textContent = "Writing letter…"; $("#letterErr").textContent = "";
+  try {
+    const r = await api("/api/letter", { claim: state.claim, rate_percent: $("#rate").value,
+                                        language: $("#lang").value, note: $("#note").value });
+    renderCalc(r.calc);
+    $("#localTitle").textContent = `${meta.languages[$("#lang").value]} – ${r.letter.subject_local}`;
+    $("#letterLocal").textContent = `${r.letter.subject_local}\n\n${r.letter.letter_local}`;
+    $("#letterEn").textContent = `${r.letter.subject_en}\n\n${r.letter.letter_en}`;
+    $("#deadlineInfo").textContent = `Payment deadline in the letter: ${r.deadline}. Send it by email and registered post, and keep a copy – you will need it as evidence.`;
+    $("#letterOut").classList.remove("hidden");
+  } catch (e) { $("#letterErr").textContent = e.message; }
+  btn.disabled = false; btn.textContent = "Write demand letter";
+};
+
+document.addEventListener("click", (e) => {
+  const copy = e.target.dataset.copy, dl = e.target.dataset.dl;
+  if (copy) { navigator.clipboard.writeText($("#" + copy).textContent); e.target.textContent = "Copied"; setTimeout(() => e.target.textContent = "Copy", 1500); }
+  if (dl) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([$("#" + dl).textContent], { type: "text/plain" }));
+    a.download = `demand-letter-${dl === "letterEn" ? "en" : $("#lang").value}.txt`; a.click();
+  }
+});
+
+api("/api/meta").then((m) => meta = m).catch((e) => $("#analyzeErr").textContent = e.message);
+</script>
+</body>
+</html>

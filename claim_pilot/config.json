@@ -1,0 +1,9 @@
+{
+  "models": [
+    "google/gemini-3.8-flash",
+    "google/gemini-3.7-flash"
+  ],
+  "late_payment_rate_percent": 10.4,
+  "rate_note": "Assumed: ECB reference rate 2.40% on 1 July 2026 (applies to H2 2026) + 8 percentage points under Directive 2011/7/EU. Some countries apply a higher margin or another reference rate - check the rate for the debtor's country.",
+  "payment_deadline_days": 14
+}
