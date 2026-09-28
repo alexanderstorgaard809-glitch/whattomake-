@@ -1,4 +1,5 @@
-"""Synthesise the soundtrack for video.html (music bed + synced sound effects).
+"""Synthesise the soundtrack for video.html: sound effects synced to the
+animation, with an optional synth music bed (off by default).
 
 Everything is generated from code (no samples, no licensed music), seeded so
 the output is identical on every run. Event times mirror renderAt() in
@@ -155,22 +156,23 @@ def counter_ticks():
     return out
 
 
-def build():
+def build(music=False):
     m = Mix()
 
-    # music bed
-    for a, b, bass, notes in CHORDS:
-        for j, n in enumerate(notes):
-            m.add(pad_note(hz(n), b - a + 0.8), a, 0.55, pan=(j / max(1, len(notes) - 1) - .5) * .6)
-        m.add(pad_note(hz(bass), b - a + 0.8), a, 0.5)
-        if 3.4 <= a < 13.6 or a == 14.95:
-            end = min(b, 16.4)
-            for x in beats(a, end):
-                m.add(pluck(hz(bass + 12)), x, .22, pan=-.1)
-    for x in list(beats(6.6, 13.6)) + list(beats(14.95, 16.4)):
-        m.add(kick(), x, .55)
-    for x in list(beats(9.8, 13.6)) + list(beats(14.95, 16.4)):
-        m.add(hat(), x + BEAT / 2, .18, pan=.3)
+    # music bed (off by default: sound effects only)
+    if music:
+        for a, b, bass, notes in CHORDS:
+            for j, n in enumerate(notes):
+                m.add(pad_note(hz(n), b - a + 0.8), a, 0.55, pan=(j / max(1, len(notes) - 1) - .5) * .6)
+            m.add(pad_note(hz(bass), b - a + 0.8), a, 0.5)
+            if 3.4 <= a < 13.6 or a == 14.95:
+                end = min(b, 16.4)
+                for x in beats(a, end):
+                    m.add(pluck(hz(bass + 12)), x, .22, pan=-.1)
+        for x in list(beats(6.6, 13.6)) + list(beats(14.95, 16.4)):
+            m.add(kick(), x, .55)
+        for x in list(beats(9.8, 13.6)) + list(beats(14.95, 16.4)):
+            m.add(hat(), x + BEAT / 2, .18, pan=.3)
 
     # S1: invoice falls and lands, stamp slams
     m.add(whoosh(0.55, 200, 2200), 0.28, .35)
@@ -238,8 +240,8 @@ def build():
     return out
 
 
-def write(path):
-    pcm = (build() * 32767).astype('<i2')
+def write(path, music=False):
+    pcm = (build(music) * 32767).astype('<i2')
     with wave.open(str(path), 'wb') as w:
         w.setnchannels(2)
         w.setsampwidth(2)
