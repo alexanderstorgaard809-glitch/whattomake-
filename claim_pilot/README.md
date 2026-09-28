@@ -44,3 +44,12 @@ python -m unittest discover tests
 ## Vigtigt
 
 Claim Pilot er et selvhjælpsværktøj og ikke juridisk rådgivning. Før der tages betaling fra kunder, skal en jurist vurdere reglerne for juridisk bistand i de lande, der sælges til.
+
+## Testsager
+
+I `examples/` ligger to opdigtede testsager:
+
+| Sag | Filer | Hvad den tester |
+|---|---|---|
+| Spansk designer → tysk firma, 3.650 € | `invoice_ES_to_DE.pdf` + `emails_ES_to_DE.txt` | Kunden er tavs. Både betalingspåbud og småkravsprocedure kan bruges. Brevet skrives på tysk |
+| Hollandsk udvikler → fransk firma, 7.800 € | `invoice_NL_to_FR.pdf` + `emails_NL_to_FR.txt` | Kunden klager over en fejl, så AI'en skal opdage en tvist. Over 5.000 €, så kun betalingspåbud. Brevet skrives på fransk |

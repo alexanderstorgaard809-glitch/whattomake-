@@ -1,0 +1,26 @@
+SAMPLE EMAIL THREAD FOR TESTING – fictitious people and companies.
+
+From: Sem van Dijk <sem@vandijkapps.example>
+To: Claire Lefèvre <claire@lefevre.example>
+Date: 15 April 2026
+Subject: Milestone 2 delivered + invoice VD-0412
+
+Hi Claire, milestone 2 is live in both stores. Invoice VD-0412 (EUR 7,800) attached, due 15 May.
+
+From: Claire Lefèvre
+To: Sem van Dijk
+Date: 22 May 2026
+Subject: RE: Milestone 2 delivered + invoice VD-0412
+
+Sem, we are not happy. Customers report that the payment step crashes on some Android phones.
+We will not pay the full invoice until this is fixed.
+
+From: Sem van Dijk
+To: Claire Lefèvre
+Date: 23 May 2026
+Subject: RE: RE: Milestone 2
+
+The crash was caused by your payment provider's SDK update and was fixed in version 2.0.3 on 20 May,
+which is live. Please pay the invoice.
+
+(No reply received since.)

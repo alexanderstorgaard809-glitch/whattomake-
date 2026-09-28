@@ -1,0 +1,41 @@
+SAMPLE EMAIL THREAD FOR TESTING – fictitious people and companies.
+
+From: Lucía Moreno <lucia@morenostudio.example>
+To: Jonas Weber <j.weber@nordlicht.example>
+Date: 29 May 2026
+Subject: Website launched – final files
+
+Hi Jonas,
+The new site is live and all templates are handed over. Thanks for a great collaboration!
+Best, Lucía
+
+From: Jonas Weber <j.weber@nordlicht.example>
+To: Lucía Moreno
+Date: 30 May 2026
+Subject: RE: Website launched – final files
+
+Hi Lucía, looks fantastic, the team is very happy. Send the invoice to ap@nordlicht.example.
+Jonas
+
+From: Lucía Moreno
+To: ap@nordlicht.example; cc Jonas Weber
+Date: 01 June 2026
+Subject: Invoice MS-2026-014
+
+Please find attached invoice MS-2026-014 for EUR 3,650.00, due 01 July 2026.
+
+From: Lucía Moreno
+To: ap@nordlicht.example; cc Jonas Weber
+Date: 08 July 2026
+Subject: Reminder: invoice MS-2026-014 overdue
+
+Friendly reminder that invoice MS-2026-014 was due on 01 July. Could you confirm the payment date?
+
+From: Lucía Moreno
+To: Jonas Weber
+Date: 04 August 2026
+Subject: Second reminder – MS-2026-014
+
+Hi Jonas, I still haven't received payment or any reply from accounts. Can you help?
+
+(No reply received since.)
