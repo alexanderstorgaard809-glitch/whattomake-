@@ -1,0 +1,25 @@
+SAMPLE EMAIL THREAD FOR TESTING – fictitious people and companies.
+
+From: Maya Hart <maya@mayahartsocial.example>
+To: Dan Price <dan@fireandfork.example>
+Date: 19 June 2026
+Subject: Notice
+
+Hi Dan, as you asked, please take this as my notice. My last day is today. I'll send a pro-rata invoice
+for June together with the May retainer.
+
+From: Maya Hart
+To: accounts@fireandfork.example; cc Dan Price
+Date: 20 June 2026
+Subject: Invoice MH-052
+
+Attached is invoice MH-052 for £2,030.00 (May retainer + pro-rata June), due 30 June 2026.
+
+From: Maya Hart
+To: accounts@fireandfork.example; cc Dan Price
+Date: 3 July 2026
+Subject: Reminder – MH-052 overdue
+
+Hi, just a reminder that MH-052 was due on 30 June. Please let me know when payment will be made.
+
+(Five further reminders by email and WhatsApp between 4 and 20 July. No reply and messages not read.)

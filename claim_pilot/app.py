@@ -32,36 +32,39 @@ def config():
     return json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 
 
+def _calc(claim, payload, cfg):
+    """Beregning i koden. `rate_override` er kun sat, hvis brugeren selv har rettet renten på siden."""
+    return claims.calculate(claim, cfg["rates"], rate_override=payload.get("rate_override"))
+
+
 def analyze(payload):
     cfg = config()
     llm = ai.OpenRouter(cfg["models"])
     claim = ai.extract_claim(llm, payload.get("files", []), payload.get("notes", ""))
     claim["disputed"] = bool((claim.get("dispute_signals") or "").strip())
-    rate = cfg["late_payment_rate_percent"]
-    calc = claims.calculate(claim, rate)
-    return {"claim": claim, "calc": calc, "rate_percent": rate,
+    return {"claim": claim, "calc": _calc(claim, {}, cfg),
             "language": claims.default_language(claim["debtor"].get("country")),
             "cost": round(llm.total_cost, 4)}
 
 
 def letter(payload):
     cfg = config()
-    claim, rate = payload["claim"], float(payload.get("rate_percent") or cfg["late_payment_rate_percent"])
-    calc = claims.calculate(claim, rate)  # altid genberegnet i koden, aldrig af AI
-    deadline = (date.today() + timedelta(days=int(cfg.get("payment_deadline_days", 14)))).isoformat()
+    claim = payload["claim"]
+    calc = _calc(claim, payload, cfg)  # altid genberegnet i koden, aldrig af AI
+    deadline = (date.today() + timedelta(days=calc["deadline_days"])).isoformat()
     llm = ai.OpenRouter(cfg["models"])
     result = ai.write_letter(llm, claim, calc, payload.get("language") or "en", deadline, payload.get("note", ""))
     return {"letter": result, "calc": calc, "deadline": deadline, "cost": round(llm.total_cost, 4)}
 
 
 def recalc(payload):
-    rate = float(payload.get("rate_percent") or config()["late_payment_rate_percent"])
-    return {"calc": claims.calculate(payload["claim"], rate)}
+    return {"calc": _calc(payload["claim"], payload, config())}
 
 
 def meta(_payload=None):
-    return {"countries": {k: v[0] for k, v in claims.EU_COUNTRIES.items()}, "languages": claims.LANGUAGES,
-            "rate_percent": config()["late_payment_rate_percent"], "rate_note": config().get("rate_note", "")}
+    rates = config()["rates"]
+    return {"countries": {k: v[0] for k, v in sorted(claims.COUNTRIES.items(), key=lambda kv: kv[1][0])},
+            "languages": claims.LANGUAGES, "rate_notes": {k: v["note"] for k, v in rates.items()}}
 
 
 ROUTES = {"/api/analyze": analyze, "/api/letter": letter, "/api/recalc": recalc, "/api/meta": meta}

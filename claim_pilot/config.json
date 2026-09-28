@@ -3,7 +3,19 @@
     "google/gemini-3.8-flash",
     "google/gemini-3.7-flash"
   ],
-  "late_payment_rate_percent": 10.4,
-  "rate_note": "Assumed: ECB reference rate 2.40% on 1 July 2026 (applies to H2 2026) + 8 percentage points under Directive 2011/7/EU. Some countries apply a higher margin or another reference rate - check the rate for the debtor's country.",
+  "rates": {
+    "EU": {
+      "percent": 10.4,
+      "note": "Assumed: ECB reference rate 2.40% on 1 July 2026 (applies to H2 2026) + 8 percentage points under Directive 2011/7/EU. Some countries apply a higher margin or another reference rate - check the rate for the debtor's country."
+    },
+    "UK": {
+      "margin": 8,
+      "base_rates": {
+        "2026-H1": 3.75,
+        "2026-H2": 3.75
+      },
+      "note": "Bank of England base rate + 8 percentage points (Late Payment of Commercial Debts (Interest) Act 1998). The base rate on 31 Dec applies to invoices due in January-June, the rate on 30 June to invoices due in July-December. Base rate was 3.75% on both dates in 2026."
+    }
+  },
   "payment_deadline_days": 14
 }

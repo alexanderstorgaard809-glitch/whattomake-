@@ -64,7 +64,7 @@
 <body>
 <main>
   <h1>Claim Pilot</h1>
-  <p class="sub">Get paid by clients in other EU countries: upload the unpaid invoice, get a legally grounded demand letter in your client's language, and see which EU court procedure you can use next.</p>
+  <p class="sub">Get paid by clients in the EU and the UK: upload the unpaid invoice, get a legally grounded demand letter in your client's language, and see which court procedure you can use next.</p>
 
   <section class="card">
     <div class="step">Step 1</div>
@@ -95,6 +95,12 @@
         <label>Name</label><input data-f="debtor.name">
         <label>Country</label><select data-f="debtor.country" class="countries"></select>
         <label class="check"><input type="checkbox" data-f="debtor.is_business"> Business</label>
+        <label>Type</label>
+        <select data-f="debtor.entity_type">
+          <option value="company">Company (Ltd, GmbH, SAS, BV…)</option>
+          <option value="sole_trader">Sole trader / self-employed</option>
+          <option value="individual">Private individual</option>
+        </select>
         <label>Address</label><input data-f="debtor.address">
       </div>
     </div>
@@ -144,9 +150,10 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
-let files = [], state = null, meta = null, totalCost = 0;
+let files = [], state = null, meta = null, totalCost = 0, rateEdited = false;
+const rateOverride = () => rateEdited ? $("#rate").value : null;
 
-const fmt = (n, cur) => (cur && cur !== "MIXED" ? cur + " " : "") +
+const fmt = (n, cur) => (cur === "GBP" ? "£" : cur === "EUR" ? "€" : cur && cur !== "MIXED" ? cur + " " : "") +
   Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -201,7 +208,8 @@ function renderReview() {
       Object.entries(meta.countries).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
   });
   document.querySelectorAll("[data-f]").forEach((el) => {
-    const v = get(c, el.dataset.f);
+    let v = get(c, el.dataset.f);
+    if (el.dataset.f === "debtor.entity_type" && !v) v = "company";
     if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? "";
     el.onchange = () => { set(c, el.dataset.f, el.type === "checkbox" ? el.checked : el.value);
                           if (el.dataset.f === "debtor.country") setLang(); recalc(); };
@@ -214,7 +222,8 @@ function renderReview() {
       <td><input data-i="${i}" data-k="currency" value="${esc(inv.currency)}" style="max-width:64px"></td></tr>`).join("");
   document.querySelectorAll("#invoiceRows input").forEach((el) => el.onchange = () => {
     c.invoices[el.dataset.i][el.dataset.k] = el.dataset.k === "amount" ? parseFloat(el.value) || 0 : el.value; recalc(); });
-  $("#rate").value = state.rate_percent; $("#rate").onchange = recalc;
+  rateEdited = false;
+  $("#rate").onchange = () => { rateEdited = true; recalc(); };
   $("#dispute").innerHTML = c.dispute_signals ? `<p class="note"><b>Dispute found in the documents:</b> ${esc(c.dispute_signals)}` +
     (c.creditor_response_to_dispute ? `<br><b>Your answer:</b> ${esc(c.creditor_response_to_dispute)}` : "") +
     `<br>The letter will address it. Untick the box above if it is resolved.</p>` : "";
@@ -227,12 +236,12 @@ function renderReview() {
 
 function setLang() {
   const map = { AT:"de",BE:"fr",BG:"bg",HR:"hr",CY:"el",CZ:"cs",DK:"da",EE:"et",FI:"fi",FR:"fr",DE:"de",GR:"el",HU:"hu",
-    IE:"en",IT:"it",LV:"lv",LT:"lt",LU:"fr",MT:"en",NL:"nl",PL:"pl",PT:"pt",RO:"ro",SK:"sk",SI:"sl",ES:"es",SE:"sv" };
+    IE:"en",GB:"en",IT:"it",LV:"lv",LT:"lt",LU:"fr",MT:"en",NL:"nl",PL:"pl",PT:"pt",RO:"ro",SK:"sk",SI:"sl",ES:"es",SE:"sv" };
   $("#lang").value = map[state.claim.debtor.country] || "en";
 }
 
 async function recalc() {
-  try { const r = await api("/api/recalc", { claim: state.claim, rate_percent: $("#rate").value }); renderCalc(r.calc); }
+  try { const r = await api("/api/recalc", { claim: state.claim, rate_override: rateOverride() }); renderCalc(r.calc); }
   catch (e) { $("#analyzeErr").textContent = e.message; }
 }
 
@@ -242,26 +251,23 @@ function renderCalc(calc) {
   $("#totals").innerHTML = `
     <div class="tile"><span>Unpaid invoices</span><b>${fmt(calc.principal, cur)}</b></div>
     <div class="tile"><span>Statutory interest to date</span><b>${fmt(calc.interest, cur)}</b></div>
-    <div class="tile"><span>Fixed compensation</span><b>${fmt(calc.compensation_eur, "EUR")}</b></div>
+    <div class="tile"><span>Fixed compensation</span><b>${fmt(calc.compensation, calc.compensation_currency)}</b></div>
     <div class="tile"><span>Interest per day from now</span><b>${fmt(calc.daily_interest, cur)}</b></div>`;
   $("#warnings").innerHTML = calc.warnings.map((w) => `<p class="note">${esc(w)}</p>`).join("");
   const p = calc.procedures;
   const mark = (ok) => ok ? `<span class="ok">✓ available</span>` : `<span class="bad">✗ not available</span>`;
-  $("#procedures").innerHTML = `
-    <table><tbody>
-      <tr><td>1. Final demand letter (step 3)</td><td><span class="ok">✓ always</span></td></tr>
-      <tr><td>2. European Payment Order</td><td>${mark(p.payment_order)}</td></tr>
-      <tr><td>3. European Small Claims Procedure</td><td>${mark(p.small_claims)}</td></tr>
-    </tbody></table>
-    <ul class="plain">${p.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>`;
-  $("#rateNote").textContent = meta.rate_note;
+  $("#procedures").innerHTML = `<table><tbody>` +
+    p.options.map((o, i) => `<tr><td>${i + 1}. ${esc(o.name)}</td><td>${mark(o.available)}</td></tr>`).join("") +
+    `</tbody></table><ul class="plain">${p.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>`;
+  if (!rateEdited) $("#rate").value = calc.rate_percent || "";
+  $("#rateNote").textContent = (meta.rate_notes[calc.regime] || "") + (calc.law ? ` Law applied: ${calc.law} (your country's rules, unless your contract says otherwise).` : "");
 }
 
 // ---------- step 3: letter ----------
 $("#letterBtn").onclick = async () => {
   const btn = $("#letterBtn"); btn.disabled = true; btn.textContent = "Writing letter…"; $("#letterErr").textContent = "";
   try {
-    const r = await api("/api/letter", { claim: state.claim, rate_percent: $("#rate").value,
+    const r = await api("/api/letter", { claim: state.claim, rate_override: rateOverride(),
                                         language: $("#lang").value, note: $("#note").value });
     renderCalc(r.calc);
     $("#localTitle").textContent = `${meta.languages[$("#lang").value]} – ${r.letter.subject_local}`;

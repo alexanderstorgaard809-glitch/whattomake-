@@ -77,13 +77,16 @@ _PARTY = {
     "properties": {
         "name": {"type": "string"},
         "address": {"type": "string"},
-        "country": {"type": "string", "description": "ISO 3166-1 alpha-2 code, e.g. DE. Empty if unknown"},
+        "country": {"type": "string", "description": "ISO 3166-1 alpha-2 code, e.g. DE; GB for the United Kingdom. Empty if unknown"},
         "vat_id": {"type": "string"},
         "email": {"type": "string"},
         "contact_person": {"type": "string", "description": "Name of the person acting for this party, empty if unknown"},
         "is_business": {"type": "boolean"},
+        "entity_type": {"type": "string", "enum": ["company", "sole_trader", "individual"],
+                        "description": "company = limited company/partnership/public body (Ltd, GmbH, SAS, BV...); "
+                                       "sole_trader = self-employed person trading under own name; individual = consumer"},
     },
-    "required": ["name", "address", "country", "vat_id", "email", "contact_person", "is_business"],
+    "required": ["name", "address", "country", "vat_id", "email", "contact_person", "is_business", "entity_type"],
     "additionalProperties": False,
 }
 
@@ -199,10 +202,10 @@ def write_letter(llm, claim, calc, language, deadline, sender_note=""):
         "statutory_interest_to_date": money(calc["interest"]),
         "interest_rate_per_year": format_percent(calc["rate_percent"], language),
         "daily_interest": money(calc["daily_interest"]),
-        "fixed_compensation": money(calc["compensation_eur"], "EUR"),
-        "total_amount_due": money(calc["principal"] + calc["interest"] + calc["compensation_eur"])
-                            if cur == "EUR" else f"{money(calc['principal'] + calc['interest'])} + "
-                            f"{money(calc['compensation_eur'], 'EUR')}",
+        "fixed_compensation": money(calc["compensation"], calc["compensation_currency"]),
+        "total_amount_due": money(calc["principal"] + calc["interest"] + calc["compensation"])
+                            if cur == calc["compensation_currency"] else f"{money(calc['principal'] + calc['interest'])} + "
+                            f"{money(calc['compensation'], calc['compensation_currency'])}",
         "b2b": calc["b2b"],
         "dispute_raised_by_debtor": claim.get("dispute_signals", "") if claim.get("disputed") else "",
         "creditor_response_to_dispute": claim.get("creditor_response_to_dispute", "") if claim.get("disputed") else "",
@@ -210,9 +213,7 @@ def write_letter(llm, claim, calc, language, deadline, sender_note=""):
         "payment_deadline": deadline,
         "next_step_if_unpaid": _next_step(calc, bool(claim.get("disputed"))),
     }
-    legal = ("Cite Directive 2011/7/EU on combating late payment (statutory interest and the EUR 40 fixed "
-             "compensation per invoice under Article 6)." if calc["b2b"] else
-             "Do not claim Directive 2011/7/EU interest or the EUR 40 compensation (not B2B).")
+    legal = _legal_instruction(calc)
     user = (f"Write the letter in {LANGUAGES.get(language, 'English')}.\n{legal}\n"
             + (f"Additional instruction from the creditor: {sender_note}\n" if sender_note else "")
             + f"FACTS (JSON):\n{json.dumps(facts, ensure_ascii=False, indent=1)}")
@@ -239,8 +240,28 @@ def untranslated(letter, english_phrases, window=6):
     return found
 
 
+def _legal_instruction(calc):
+    if not calc["b2b"] or not calc["regime"]:
+        return ("Do not claim statutory late-payment interest or fixed compensation (not business-to-business "
+                "or unsupported country). Only demand the invoiced amount.")
+    if calc["regime"] == "UK":
+        text = ("This is a letter before claim under English law. Cite the Late Payment of Commercial Debts "
+                "(Interest) Act 1998: statutory interest at 8% above the Bank of England base rate and the fixed "
+                "sum compensation per invoice (section 5A). Say the claim will be issued in the County Court.")
+        if calc["procedures"].get("uk_protocol"):
+            text += (" The debtor is a sole trader or individual, so the Pre-Action Protocol for Debt Claims applies: "
+                     "state that the Information Sheet and Reply Form are enclosed, that the debtor has 30 days to "
+                     "reply, and that they may want to seek free independent debt advice.")
+        return text
+    return ("Cite Directive 2011/7/EU on combating late payment (statutory interest and the EUR 40 fixed "
+            "compensation per invoice under Article 6).")
+
+
 def _next_step(calc, disputed=False):
     p = calc["procedures"]
+    if p.get("uk_claim"):
+        return ("issue a claim against you in the County Court (for example through Money Claim Online) to recover "
+                "the debt, interest and costs, without further notice")
     if disputed:
         # Et betalingspåbud kan afvises med en simpel indsigelse, så nævn det ikke ved en tvist.
         if p["small_claims"]:
