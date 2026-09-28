@@ -66,6 +66,23 @@ class CalcTests(unittest.TestCase):
         r = claims.calculate(claim(invoices=inv), 10.4, today=TODAY)
         self.assertEqual((r["interest"], r["compensation_eur"]), (0.0, 0))
 
+    def test_money_format(self):
+        self.assertEqual(claims.format_money(7800, "EUR", "en"), "EUR 7,800.00")
+        self.assertEqual(claims.format_money(7800, "EUR", "de"), "7.800,00 €")
+        self.assertEqual(claims.format_money(7800, "EUR", "fr"), "7\u202f800,00 €")
+        self.assertEqual(claims.format_money(8142.26, "EUR", "nl"), "€ 8.142,26")
+        self.assertEqual(claims.format_money(1234.5, "SEK", "sv"), "1\u00a0234,50 SEK")
+
+    def test_disputed_claim(self):
+        c = dict(claim(), disputed=True)
+        p = claims.calculate(c, 10.4, today=TODAY)["procedures"]
+        self.assertTrue(any("disputes" in n for n in p["notes"]))
+        import ai
+        self.assertIn("Small Claims", ai._next_step({"procedures": p}, disputed=True))
+        big = {"payment_order": True, "small_claims": False}
+        self.assertNotIn("Payment Order", ai._next_step({"procedures": big}, disputed=True))
+        self.assertIn("Payment Order", ai._next_step({"procedures": big}, disputed=False))
+
     def test_language_defaults(self):
         self.assertEqual(claims.default_language("de"), "de")
         self.assertEqual(claims.default_language("IE"), "en")

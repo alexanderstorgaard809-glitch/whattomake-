@@ -85,6 +85,7 @@
       <div>
         <strong>You (creditor)</strong>
         <label>Name</label><input data-f="creditor.name">
+        <label>Your name (signature)</label><input data-f="creditor.contact_person">
         <label>Country</label><select data-f="creditor.country" class="countries"></select>
         <label class="check"><input type="checkbox" data-f="creditor.is_business"> Business / self-employed</label>
         <label>Bank details for payment</label><input data-f="creditor_bank" placeholder="IBAN / BIC">
@@ -109,6 +110,7 @@
     <div id="rateNote" class="sub" style="font-size:12px;margin:4px 0 0"></div>
 
     <div class="totals" id="totals"></div>
+    <label class="check" style="margin-top:14px"><input type="checkbox" data-f="disputed"> The client disputes the work or the amount</label>
     <div id="dispute"></div>
     <div id="warnings"></div>
 
@@ -213,7 +215,9 @@ function renderReview() {
   document.querySelectorAll("#invoiceRows input").forEach((el) => el.onchange = () => {
     c.invoices[el.dataset.i][el.dataset.k] = el.dataset.k === "amount" ? parseFloat(el.value) || 0 : el.value; recalc(); });
   $("#rate").value = state.rate_percent; $("#rate").onchange = recalc;
-  $("#dispute").innerHTML = c.dispute_signals ? `<p class="note"><b>Possible dispute:</b> ${esc(c.dispute_signals)} – if the client contests the work, the payment order is less suitable; small claims still works.</p>` : "";
+  $("#dispute").innerHTML = c.dispute_signals ? `<p class="note"><b>Dispute found in the documents:</b> ${esc(c.dispute_signals)}` +
+    (c.creditor_response_to_dispute ? `<br><b>Your answer:</b> ${esc(c.creditor_response_to_dispute)}` : "") +
+    `<br>The letter will address it. Untick the box above if it is resolved.</p>` : "";
   $("#lang").innerHTML = Object.entries(meta.languages).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
   $("#lang").value = state.language || "en";
   renderCalc(state.calc);

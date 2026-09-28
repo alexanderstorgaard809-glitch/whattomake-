@@ -7,6 +7,7 @@ import base64
 import json
 import os
 import time
+from datetime import date
 import urllib.error
 import urllib.request
 
@@ -79,9 +80,10 @@ _PARTY = {
         "country": {"type": "string", "description": "ISO 3166-1 alpha-2 code, e.g. DE. Empty if unknown"},
         "vat_id": {"type": "string"},
         "email": {"type": "string"},
+        "contact_person": {"type": "string", "description": "Name of the person acting for this party, empty if unknown"},
         "is_business": {"type": "boolean"},
     },
-    "required": ["name", "address", "country", "vat_id", "email", "is_business"],
+    "required": ["name", "address", "country", "vat_id", "email", "contact_person", "is_business"],
     "additionalProperties": False,
 }
 
@@ -110,11 +112,13 @@ EXTRACT_SCHEMA = {
         "work_summary": {"type": "string", "description": "One sentence: what was delivered"},
         "dispute_signals": {"type": "string",
                             "description": "Any sign the debtor contests the work or amount, quoted briefly. Empty if none"},
+        "creditor_response_to_dispute": {"type": "string",
+                                         "description": "How the creditor answered the complaint (e.g. fix delivered, date), empty if none"},
         "reminders_sent": {"type": "string", "description": "Earlier reminders mentioned in the material, empty if none"},
         "missing_info": {"type": "array", "items": {"type": "string"}},
     },
     "required": ["creditor", "debtor", "creditor_bank", "invoices", "work_summary", "dispute_signals",
-                 "reminders_sent", "missing_info"],
+                 "creditor_response_to_dispute", "reminders_sent", "missing_info"],
     "additionalProperties": False,
 }
 
@@ -155,24 +159,49 @@ LETTER_SCHEMA = {
 
 LETTER_SYSTEM = """You write formal final payment demand letters (letters before action) between businesses in the EU.
 Tone: firm, professional, polite, factual. No threats beyond the legal steps given. Plain text, no markdown.
-Use ONLY the facts and amounts provided. Copy all numbers, dates and invoice numbers exactly.
+Use ONLY the facts provided. Amounts are given pre-formatted per language: copy them exactly as written,
+never reformat or recalculate them. Copy dates and invoice numbers exactly.
+
+Layout (use line breaks and blank lines like a real business letter):
+  sender block (name, address, VAT ID, email) / recipient block / place and date / subject line /
+  salutation / short paragraphs / an itemised amount overview, one item per line (principal, interest,
+  fixed compensation, total) / deadline and bank details on separate lines / consequence / closing /
+  signature: the creditor's contact person (if known) on one line and the company name below.
+
+If the facts contain a dispute raised by the debtor, address it in its own short paragraph: acknowledge it
+factually, state the creditor's response (e.g. that the issue was fixed and when) and conclude that the
+amount is due. Never admit fault and never invent details.
+
 Write the letter natively in the requested language (not a word-for-word translation), then an English version
 with the same content. Use '[...]' placeholders for anything missing, e.g. bank details."""
 
 
 def write_letter(llm, claim, calc, language, deadline, sender_note=""):
-    from claims import LANGUAGES
+    from claims import LANGUAGES, format_money
+    cur = calc["currency"] if calc["currency"] != "MIXED" else ""
+    money = lambda v, c=cur: format_money(v, c, language)
     facts = {
         "creditor": claim["creditor"], "debtor": claim["debtor"],
         "creditor_bank": claim.get("creditor_bank") or "[bank details]",
         "work_summary": claim.get("work_summary", ""),
         "reminders_sent": claim.get("reminders_sent", ""),
-        "invoices": calc["lines"], "currency": calc["currency"],
-        "principal": calc["principal"], "statutory_interest_to_date": calc["interest"],
-        "interest_rate_percent_per_year": calc["rate_percent"], "daily_interest": calc["daily_interest"],
-        "flat_compensation_eur": calc["compensation_eur"], "b2b": calc["b2b"],
+        "invoices": [{"number": l["number"], "issue_date": l["issue_date"], "due_date": l["due_date"],
+                      "amount": money(l["amount"], l["currency"]), "days_overdue": l["days_late"]}
+                     for l in calc["lines"]],
+        "principal": money(calc["principal"]),
+        "statutory_interest_to_date": money(calc["interest"]),
+        "interest_rate_per_year": f"{calc['rate_percent']} %",
+        "daily_interest": money(calc["daily_interest"]),
+        "fixed_compensation": money(calc["compensation_eur"], "EUR"),
+        "total_amount_due": money(calc["principal"] + calc["interest"] + calc["compensation_eur"])
+                            if cur == "EUR" else f"{money(calc['principal'] + calc['interest'])} + "
+                            f"{money(calc['compensation_eur'], 'EUR')}",
+        "b2b": calc["b2b"],
+        "dispute_raised_by_debtor": claim.get("dispute_signals", "") if claim.get("disputed") else "",
+        "creditor_response_to_dispute": claim.get("creditor_response_to_dispute", "") if claim.get("disputed") else "",
+        "letter_date": date.today().isoformat(),
         "payment_deadline": deadline,
-        "next_step_if_unpaid": _next_step(calc),
+        "next_step_if_unpaid": _next_step(calc, bool(claim.get("disputed"))),
     }
     legal = ("Cite Directive 2011/7/EU on combating late payment (statutory interest and the EUR 40 fixed "
              "compensation per invoice under Article 6)." if calc["b2b"] else
@@ -183,8 +212,14 @@ def write_letter(llm, claim, calc, language, deadline, sender_note=""):
     return llm.json_call(LETTER_SYSTEM, user, "demand_letter", LETTER_SCHEMA)
 
 
-def _next_step(calc):
+def _next_step(calc, disputed=False):
     p = calc["procedures"]
+    if disputed:
+        # Et betalingspåbud kan afvises med en simpel indsigelse, så nævn det ikke ved en tvist.
+        if p["small_claims"]:
+            return ("start the European Small Claims Procedure (Regulation (EC) No 861/2007) at the competent "
+                    "court, without further notice")
+        return "initiate legal proceedings at the competent court to recover the debt, without further notice"
     if p["small_claims"]:
         return ("apply for a European Payment Order (Regulation (EC) No 1896/2006) or start the European Small "
                 "Claims Procedure (Regulation (EC) No 861/2007) at the competent court, without further notice")

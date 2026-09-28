@@ -36,6 +36,7 @@ def analyze(payload):
     cfg = config()
     llm = ai.OpenRouter(cfg["models"])
     claim = ai.extract_claim(llm, payload.get("files", []), payload.get("notes", ""))
+    claim["disputed"] = bool((claim.get("dispute_signals") or "").strip())
     rate = cfg["late_payment_rate_percent"]
     calc = claims.calculate(claim, rate)
     return {"claim": claim, "calc": calc, "rate_percent": rate,

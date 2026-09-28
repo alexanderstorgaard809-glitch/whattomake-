@@ -97,7 +97,7 @@ def calculate(claim, rate_percent, today=None):
     if not any(l["days_late"] > 0 for l in lines):
         warnings.append("No invoice is overdue yet.")
 
-    procedures = procedure_options(c_country, d_country, principal, currency)
+    procedures = procedure_options(c_country, d_country, principal, currency, bool(claim.get("disputed")))
     return {
         "rate_percent": rate_percent,
         "b2b": b2b,
@@ -113,7 +113,7 @@ def calculate(claim, rate_percent, today=None):
     }
 
 
-def procedure_options(c_country, d_country, principal, currency):
+def procedure_options(c_country, d_country, principal, currency, disputed=False):
     """Hvilke EU-procedurer kan kreditor bruge? Returnerer anbefaling og forklaring."""
     out = {"cross_border": False, "payment_order": False, "small_claims": False, "notes": []}
     if c_country not in EU_COUNTRIES or d_country not in EU_COUNTRIES:
@@ -136,6 +136,10 @@ def procedure_options(c_country, d_country, principal, currency):
                             f"is at most EUR {SMALL_CLAIMS_LIMIT_EUR:,}. Also works if the debtor disputes it.")
     elif currency != "EUR":
         out["notes"].append("Small claims limit is in EUR: convert the amount to check eligibility.")
+    if disputed:
+        out["notes"].append("The client disputes the claim: a payment order ends if the client files an objection "
+                            "and becomes ordinary proceedings. " + ("Small claims is the better route."
+                            if out["small_claims"] else "Expect ordinary court proceedings; consider a lawyer."))
     out["notes"].append(f"Competent court: normally in the debtor's country ({EU_COUNTRIES[d_country][0]}). "
                         "Find the exact court with the court-finder on e-justice.europa.eu.")
     return out
@@ -143,3 +147,23 @@ def procedure_options(c_country, d_country, principal, currency):
 
 def default_language(country):
     return EU_COUNTRIES.get((country or "").upper(), (None, "en"))[1]
+
+
+# Beløbsformat pr. sprog: (tusindtalsseparator, decimaltegn, valuta før beløbet?)
+_MONEY = {"en": (",", ".", True), "fr": ("\u202f", ",", False), "de": (".", ",", False), "es": (".", ",", False),
+          "it": (".", ",", False), "nl": (".", ",", True), "pt": (".", ",", False), "da": (".", ",", False),
+          "sv": ("\u00a0", ",", False), "fi": ("\u00a0", ",", False), "pl": ("\u00a0", ",", False),
+          "cs": ("\u00a0", ",", False), "sk": ("\u00a0", ",", False)}
+_SYMBOL = {"EUR": "€"}
+
+
+def format_money(amount, currency, language="en"):
+    """Fx 7800 EUR -> 'EUR 7,800.00' (en), '7.800,00 €' (de), '7 800,00 €' (fr)."""
+    thousands, decimal, before = _MONEY.get(language, (".", ",", False))
+    text = f"{float(amount):,.2f}".replace(",", "\x00").replace(".", decimal).replace("\x00", thousands)
+    if not currency:
+        return text
+    if language == "en":
+        return f"{currency} {text}"
+    symbol = _SYMBOL.get(currency, currency)
+    return f"{symbol} {text}" if before else f"{text} {symbol}"
