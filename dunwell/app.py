@@ -8,6 +8,7 @@ Privatliv: uploadede filer og sagsdata behandles kun i hukommelsen under foresp�
 Der logges kun metode, sti og statuskode (ingen IP-adresser, ingen indhold).
 """
 
+import hashlib
 import json
 import os
 import re
@@ -150,8 +151,14 @@ ROUTES = {"/api/analyze": analyze, "/api/letter": letter, "/api/recalc": recalc,
 AI_ROUTES = {"/api/analyze", "/api/letter"}
 
 
+def asset_version():
+    """Kort hash af site.css. Ændres filen, ændres adressen, så browsere aldrig bruger en gammel version."""
+    return hashlib.sha256((STATIC / "site.css").read_bytes()).hexdigest()[:10]
+
+
 def render_page(name):
     html = (STATIC / name).read_text(encoding="utf-8")
+    html = html.replace('href="/site.css"', f'href="/site.css?v={asset_version()}"')
     values = {
         "OPERATOR_NAME": os.environ.get("OPERATOR_NAME", "[Your name or company]"),
         "CONTACT_EMAIL": os.environ.get("CONTACT_EMAIL", "[your@email]"),
@@ -179,7 +186,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, render_page(PAGES[path]), "text/html; charset=utf-8")
         if path in ASSETS:
             name, ctype = ASSETS[path]
-            return self._send(200, (STATIC / name).read_bytes(), ctype, cache=True)
+            # Adressen indeholder en hash (?v=...), så filen må gemmes længe i browseren.
+            return self._send(200, (STATIC / name).read_bytes(), ctype, cache="?v=" in self.path)
         if path.startswith("/fonts/"):
             f = FONTS / path[len("/fonts/"):]
             if "/" not in path[len("/fonts/"):] and f.suffix == ".woff2" and f.is_file():
