@@ -1,12 +1,13 @@
 """Render video.html to MP4 (16:9 and 9:16).
 
-Needs: pip install playwright imageio-ffmpeg  (and a Chromium for Playwright).
+Needs: pip install playwright imageio-ffmpeg numpy  (and a Chromium for Playwright).
 
     python render_video.py                 # both formats into ./out
     python render_video.py --stills 1,5,9  # PNG stills at those seconds instead
 
 Each frame is rendered independently by calling renderAt(t) in the page,
-screenshotted, and piped to ffmpeg as H.264.
+screenshotted, and piped to ffmpeg as H.264. The soundtrack from soundtrack.py
+is muxed in as AAC.
 """
 import argparse
 import os
@@ -27,7 +28,7 @@ def ffmpeg_exe():
         return "ffmpeg"
 
 
-def render(page, fmt, out, fps, stills):
+def render(page, fmt, out, fps, stills, audio):
     w, h = FORMATS[fmt]
     page.set_viewport_size({"width": w, "height": h})
     page.goto((HERE / "video.html").as_uri() + f"?f={fmt}")
@@ -41,8 +42,8 @@ def render(page, fmt, out, fps, stills):
     path = out / f"dunwell-{fmt}.mp4"
     proc = subprocess.Popen(
         [ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", str(fps),
-         "-i", "-", "-c:v", "libx264", "-preset", "slow", "-crf", "18",
-         "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(path)],
+         "-i", "-", "-i", str(audio), "-c:v", "libx264", "-preset", "slow", "-crf", "18",
+         "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", str(path)],
         stdin=subprocess.PIPE)
     for i in range(int(duration * fps) + 1):
         page.evaluate(f"renderAt({i / fps})")
@@ -62,11 +63,15 @@ def main():
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     stills = [float(s) for s in a.stills.split(",") if s]
+    audio = out / "dunwell.wav"
+    if not stills:
+        import soundtrack
+        soundtrack.write(audio)
     with sync_playwright() as p:
         browser = p.chromium.launch(executable_path=os.environ.get("CHROME_PATH") or None)
         page = browser.new_page()
         for fmt in a.formats.split(","):
-            render(page, fmt, out, a.fps, stills)
+            render(page, fmt, out, a.fps, stills, audio)
         browser.close()
 
 
