@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy – Claim Pilot</title>
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="/">Claim<span>Pilot</span></a>
+  <nav><a href="/app">Try the demo</a></nav>
+</div></header>
+
+<main class="wrap legal">
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: {{LAST_UPDATED}}</p>
+
+  <p><b>Short version:</b> we don't store your files, we don't use cookies or tracking, and we only send your documents to an AI service to write your letter. That service is set up so that it neither keeps nor trains on your data.</p>
+
+  <h2>1. Who is responsible</h2>
+  <p>The controller for personal data processed through this website is:<br>
+  {{OPERATOR_NAME}}, {{OPERATOR_ADDRESS}}<br>
+  Email: <a href="mailto:{{CONTACT_EMAIL}}">{{CONTACT_EMAIL}}</a></p>
+
+  <h2>2. What data we process</h2>
+  <table>
+    <tr><th>Data</th><th>Why</th><th>Legal basis (GDPR)</th><th>How long</th></tr>
+    <tr><td>Documents and text you upload or type (e.g. invoices, emails). These may contain names, addresses, email addresses and bank details of you and of your client.</td>
+        <td>To extract the facts of your claim, calculate amounts and write your letter.</td>
+        <td>Art. 6(1)(b), to provide the service you request. For your client's data: Art. 6(1)(f), our and your legitimate interest in recovering an unpaid debt.</td>
+        <td>Only while your request is being processed (usually seconds). Nothing is saved to disk or a database.</td></tr>
+    <tr><td>The claim details shown on the page and your finished letter</td>
+        <td>To show you the result.</td>
+        <td>Art. 6(1)(b)</td>
+        <td>Only in your browser tab. They disappear when you close or reload it.</td></tr>
+    <tr><td>Your IP address</td>
+        <td>To limit how often the free demo can be used and to prevent abuse.</td>
+        <td>Art. 6(1)(f), our legitimate interest in keeping the service secure and available.</td>
+        <td>Held in memory for up to one hour. Our application does not write IP addresses to its logs.</td></tr>
+    <tr><td>Technical request data (time, page requested, status code)</td>
+        <td>To run and troubleshoot the service.</td>
+        <td>Art. 6(1)(f)</td>
+        <td>Kept by our hosting provider for a limited period under its own policy.</td></tr>
+  </table>
+  <p>You are not required to provide any data. But without documents or details we cannot prepare a letter. Please only upload what is needed for the claim.</p>
+
+  <h2>3. Who receives the data</h2>
+  <p>We use these service providers (processors) to run the demo:</p>
+  <ul>
+    <li><b>Render Services, Inc.</b> (USA) hosts the website.</li>
+    <li><b>OpenRouter, Inc.</b> (USA) forwards your documents to an AI model. We instruct it to use only providers with <b>zero data retention</b> that <b>do not use data for training</b>.</li>
+    <li><b>The AI model provider</b> selected by OpenRouter under those restrictions (currently Google's Gemini models) processes the request and returns the result.</li>
+  </ul>
+  <p>We do not sell, rent or share your data with anyone else, and we do not use it for marketing.</p>
+
+  <h2>4. Transfers outside the EU/EEA</h2>
+  <p>Some of these providers are based in the USA. Where data is transferred outside the EU/EEA, this relies on the safeguards each provider offers, such as the European Commission's Standard Contractual Clauses or certification under the EU-U.S. Data Privacy Framework.</p>
+
+  <h2>5. Cookies and tracking</h2>
+  <p>This website uses <b>no cookies, no analytics, no advertising and no third-party scripts or fonts</b>. That is why there is no cookie banner.</p>
+
+  <h2>6. Automated processing</h2>
+  <p>An AI model reads your documents and drafts a letter. Amounts, interest and legal thresholds are calculated by fixed rules in our code, not by the AI. No decision with legal or similarly significant effect is made about you. You decide whether to use the letter, and you can edit all details first.</p>
+
+  <h2>7. Your rights</h2>
+  <p>You have the right to access, rectify and erase your personal data, to restrict or object to processing, and to data portability. Because we do not store your documents, we usually hold no data that could be linked to you after your request is done. To exercise your rights, email <a href="mailto:{{CONTACT_EMAIL}}">{{CONTACT_EMAIL}}</a>.</p>
+  <p>You can also complain to a data protection authority, for example in the country where you live or work, or where the controller is established.</p>
+
+  <h2>8. Security</h2>
+  <p>All traffic is encrypted (HTTPS). Files are only held in memory during processing, and we limit file sizes and usage to prevent abuse.</p>
+
+  <h2>9. Children</h2>
+  <p>This service is intended for businesses and professionals. It is not directed at anyone under 18.</p>
+
+  <h2>10. Changes</h2>
+  <p>We may update this policy as the service develops. The date at the top shows when it last changed.</p>
+</main>
+
+<footer class="site"><div class="wrap">
+  <a href="/">Home</a><a href="/app">Demo</a><a href="/terms">Terms</a><a href="mailto:{{CONTACT_EMAIL}}">Contact</a>
+</div></footer>
+</body>
+</html>

@@ -17,5 +17,12 @@
       "note": "Bank of England base rate + 8 percentage points (Late Payment of Commercial Debts (Interest) Act 1998). The base rate on 31 Dec applies to invoices due in January-June, the rate on 30 June to invoices due in July-December. Base rate was 3.75% on both dates in 2026."
     }
   },
-  "payment_deadline_days": 14
+  "privacy": {
+    "data_collection": "deny",
+    "zdr": true
+  },
+  "demo_limits": {
+    "ai_calls_per_ip_per_hour": 10,
+    "ai_calls_per_day": 200
+  }
 }

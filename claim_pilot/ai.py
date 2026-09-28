@@ -19,8 +19,9 @@ class AIError(Exception):
 
 
 class OpenRouter:
-    def __init__(self, models):
+    def __init__(self, models, privacy=None):
         self.models = models
+        self.privacy = privacy or {}
         self.api_key = os.environ.get("OPENROUTER_API_KEY")
         if not self.api_key:
             raise AIError("Mangler OPENROUTER_API_KEY. Læg den i filen .env (se .env.example).")
@@ -35,6 +36,10 @@ class OpenRouter:
             "temperature": 0.2,
             "usage": {"include": True},
         }
+        if self.privacy:
+            # Kun udbydere, der hverken gemmer data (zero data retention) eller træner på dem.
+            body["provider"] = {"data_collection": self.privacy.get("data_collection", "deny"),
+                                "zdr": bool(self.privacy.get("zdr", True))}
         last = None
         for attempt in range(retries):
             try:

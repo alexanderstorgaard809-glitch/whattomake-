@@ -21,7 +21,39 @@ Krav: Python 3.9 eller nyere. Ingen ekstra pakker.
    ```
    python app.py
    ```
-3. Browseren åbner selv http://localhost:8000. Stop med **Ctrl + C** i terminalen.
+3. Browseren åbner selv http://localhost:8000. Stop med **Ctrl + C** i terminalen. Demoen ligger på http://localhost:8000/app.
+
+## Læg den online gratis (Render)
+
+Siden består af: forside (`/`), demo (`/app`), privatlivspolitik (`/privacy`) og vilkår (`/terms`).
+
+**1. Lav en separat OpenRouter-nøgle med et beløbsloft**
+På https://openrouter.ai/keys: *Create key*, kald den "claim-pilot-web", og sæt **Credit limit** til fx 5 USD. Så kan siden aldrig bruge mere, selv hvis nogen misbruger den.
+
+**2. Opret siden på Render**
+1. Gå til https://render.com og log ind med din GitHub-konto.
+2. Vælg **New → Blueprint** og vælg repoet `whattomake-` og branchen `claude/compassionate-meitner-5ho40v`.
+3. Render læser `render.yaml` og beder om de hemmelige værdier:
+   - `OPENROUTER_API_KEY`: nøglen fra trin 1
+   - `OPERATOR_NAME`: dit navn eller firmanavn
+   - `OPERATOR_ADDRESS`: din adresse (vises i privatlivspolitikken, det kræver GDPR)
+   - `OPERATOR_COUNTRY`: dit land (til vilkårene)
+   - `CONTACT_EMAIL`: en e-mail, folk kan skrive til
+4. Klik **Apply**. Efter et par minutter er siden live på `https://claim-pilot.onrender.com` (eller et lignende navn).
+
+**Bemærk:** Den gratis plan sover efter 15 minutter uden besøg, og det første besøg tager så ca. et minut.
+
+## Privatliv og sikkerhed (indbygget)
+
+- Uploadede filer og sagsdata **gemmes aldrig**. De behandles kun i hukommelsen under forespørgslen.
+- AI-kald går kun til udbydere med **zero data retention**, som **ikke træner** på data (`privacy` i `config.json`).
+- Ingen cookies, ingen analyse og ingen eksterne scripts eller fonte, så der er ingen cookie-banner.
+- IP-adresser bruges kun til brugsgrænsen (10 AI-kald pr. IP pr. time, 200 pr. dag, se `demo_limits`). De holdes i hukommelsen i højst en time og logges ikke.
+- Sikkerhedsheadere (CSP m.m.), og fejlbeskeder viser ingen interne detaljer online.
+
+**Privatlivspolitikken og vilkårene er skabeloner.** Læs dem igennem, og få dem gerne tjekket af en jurist, før du tager betaling eller markedsfører bredt.
+
+Hvis AI-kald fejler med "no endpoints", findes der ingen udbyder med zero data retention for modellen. Så skift model i `config.json`. Slå ikke `zdr` fra uden også at rette privatlivspolitikken.
 
 ## AI-model
 

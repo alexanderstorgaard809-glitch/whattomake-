@@ -1,0 +1,58 @@
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dde1e8;
+  --accent: #2f5bea; --accent-text: #ffffff; --soft: #eef2fd; --ok: #1a7f4b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151b; --card: #1b1f27; --text: #e6e9ef; --muted: #9aa3b2; --line: #2d333f;
+    --accent: #6f8ff7; --accent-text: #0d1016; --soft: #222a3d; --ok: #4cc38a;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+       font: 16px/1.6 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+a { color: var(--accent); }
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+header.top { border-bottom: 1px solid var(--line); background: var(--card); }
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 58px; }
+.brand { font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
+.brand span { color: var(--accent); }
+nav a { margin-left: 18px; color: var(--muted); text-decoration: none; font-size: 15px; }
+nav a:hover { color: var(--text); }
+.hero { padding: 64px 0 40px; }
+.hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+.hero p { font-size: 19px; color: var(--muted); max-width: 680px; margin: 0 0 28px; }
+.btn { display: inline-block; background: var(--accent); color: var(--accent-text); padding: 12px 22px;
+       border-radius: 10px; font-weight: 600; text-decoration: none; margin: 0 10px 10px 0; }
+.btn.secondary { background: var(--soft); color: var(--accent); }
+.badge { display: inline-block; background: var(--soft); color: var(--accent); border-radius: 999px;
+         padding: 3px 12px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
+section { padding: 36px 0; }
+section h2 { font-size: 26px; margin: 0 0 18px; letter-spacing: -0.01em; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (max-width: 720px) { .grid3, .grid2 { grid-template-columns: 1fr; } nav a { margin-left: 12px; } }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.card h3 { margin: 0 0 6px; font-size: 17px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.num { display: inline-flex; width: 28px; height: 28px; border-radius: 50%; background: var(--soft); color: var(--accent);
+       align-items: center; justify-content: center; font-weight: 700; margin-bottom: 10px; }
+ul.check { list-style: none; padding: 0; margin: 0; }
+ul.check li { padding: 6px 0 6px 28px; position: relative; }
+ul.check li::before { content: "✓"; position: absolute; left: 4px; color: var(--ok); font-weight: 700; }
+.letter { font: 14px/1.6 Georgia, "Times New Roman", serif; white-space: pre-wrap; background: var(--card);
+          border: 1px solid var(--line); border-radius: 12px; padding: 20px; max-height: 420px; overflow: auto; }
+.quote { font-size: 20px; font-style: italic; border-left: 4px solid var(--accent); padding: 4px 0 4px 16px; margin: 0; }
+.quote small { display: block; font-size: 13px; font-style: normal; color: var(--muted); margin-top: 6px; }
+details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; }
+summary { cursor: pointer; font-weight: 600; }
+details p { color: var(--muted); margin: 10px 0 0; }
+footer.site { border-top: 1px solid var(--line); margin-top: 40px; padding: 24px 0 40px; color: var(--muted); font-size: 14px; }
+footer.site a { color: var(--muted); margin-right: 16px; }
+.legal h1 { font-size: 32px; margin: 40px 0 6px; }
+.legal h2 { font-size: 20px; margin: 30px 0 8px; }
+.legal p, .legal li { color: var(--text); }
+.legal .updated { color: var(--muted); margin-bottom: 24px; }
+.legal table { border-collapse: collapse; width: 100%; font-size: 15px; }
+.legal th, .legal td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.legal th { background: var(--soft); }

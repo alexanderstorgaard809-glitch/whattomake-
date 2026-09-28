@@ -1,0 +1,1 @@
+# Ingen eksterne pakker: appen bruger kun Pythons standardbibliotek.

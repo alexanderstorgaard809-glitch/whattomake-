@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Claim Pilot</title>
+<title>Claim Pilot – Demo</title>
 <style>
   :root {
     --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dde1e8;
@@ -59,11 +59,20 @@
   .error { color: var(--bad); margin-top: 10px; }
   .hidden { display: none; }
   footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+  footer a { color: var(--muted); }
+  .topbar { display: flex; justify-content: space-between; align-items: center; max-width: 860px; margin: 0 auto; padding: 14px 16px 0; }
+  .brand { font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
+  .brand span, .demo { color: var(--accent); }
+  .demo { font-size: 13px; font-weight: 600; background: var(--soft); border-radius: 999px; padding: 2px 10px; vertical-align: middle; }
+  .topbar nav a { margin-left: 16px; color: var(--muted); text-decoration: none; font-size: 14px; }
+  .privacy { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
 </style>
 </head>
 <body>
+<header class="topbar"><a class="brand" href="/">Claim<span>Pilot</span></a>
+  <nav><a href="/">Home</a><a href="/privacy">Privacy</a></nav></header>
 <main>
-  <h1>Claim Pilot</h1>
+  <h1>Claim Pilot <small class="demo">demo</small></h1>
   <p class="sub">Get paid by clients in the EU and the UK: upload the unpaid invoice, get a legally grounded demand letter in your client's language, and see which court procedure you can use next.</p>
 
   <section class="card">
@@ -72,6 +81,9 @@
     <div id="drop">Drop files here or click to choose<br><small>PDF, photo/screenshot or .txt/.eml. Several files are fine.</small></div>
     <input id="fileInput" type="file" multiple accept=".pdf,image/*,.txt,.eml" class="hidden">
     <ul id="fileList"></ul>
+    <button type="button" class="secondary" id="sampleBtn">No invoice at hand? Load a sample case</button>
+    <p class="privacy">🔒 Your files are only used to prepare your letter and are never stored. No cookies, no tracking.
+      Please only upload what's needed for the claim. <a href="/privacy">Privacy policy</a></p>
     <label for="notes">Anything else we should know? (optional)</label>
     <textarea id="notes" placeholder="E.g. 'Client stopped answering after I delivered the website in May. I sent two reminders.'"></textarea>
     <button id="analyzeBtn">Analyse claim</button>
@@ -144,8 +156,9 @@
     </div>
   </section>
 
-  <p id="cost" class="sub" style="font-size:12px"></p>
-  <footer>Claim Pilot is a self-help tool, not legal advice. Check amounts, dates and the rules in the debtor's country before sending. Statutory interest under Directive 2011/7/EU applies between businesses.</footer>
+  <footer>Claim Pilot is a self-help tool, not legal advice. Check amounts, dates and the rules before sending.
+    Statutory interest and fixed compensation only apply between businesses.<br>
+    <a href="/">Home</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></footer>
 </main>
 
 <script>
@@ -162,7 +175,7 @@ async function api(path, body) {
                                   body: body ? JSON.stringify(body) : undefined });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || res.statusText);
-  if (data.cost) { totalCost += data.cost; $("#cost").textContent = `AI cost this session: $${totalCost.toFixed(4)}`; }
+  if (data.cost) totalCost += data.cost;
   return data;
 }
 
@@ -186,6 +199,20 @@ function addFiles(list) {
     reader.readAsDataURL(f);
   }
 }
+
+async function loadSample() {
+  const names = ["invoice_ES_to_DE.pdf", "emails_ES_to_DE.txt"];
+  files = [];
+  for (const n of names) {
+    const blob = await (await fetch("/examples/" + n)).blob();
+    const url = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
+    files.push({ name: n, data_url: n.endsWith(".txt") ? url.replace(/^data:[^;]*;/, "data:text/plain;") : url });
+  }
+  $("#fileList").innerHTML = files.map((x) => `<li>${esc(x.name)} <small>(sample – fictitious)</small></li>`).join("");
+  $("#notes").value = "Sample case: Spanish designer, German client stopped replying after two reminders.";
+}
+$("#sampleBtn").onclick = loadSample;
+if (new URLSearchParams(location.search).get("sample")) loadSample();
 
 $("#analyzeBtn").onclick = async () => {
   if (!files.length && !$("#notes").value.trim()) { $("#analyzeErr").textContent = "Add at least one file."; return; }
