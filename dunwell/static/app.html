@@ -3,235 +3,390 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dunwell – Demo</title>
+<title>Dunwell demo</title>
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
 <style>
-  :root {
-    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dde1e8;
-    --accent: #2f5bea; --accent-text: #ffffff; --ok: #1a7f4b; --warn: #9a6200; --warn-bg: #fff6e0;
-    --bad: #b42318; --soft: #eef2fd;
+  .app { padding: 32px 0 56px; }
+  /* stepper */
+  .stepper { display: flex; gap: 8px; list-style: none; margin: 0 0 28px; padding: 0; flex-wrap: wrap; }
+  .stepper button { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: var(--surface);
+                    color: var(--muted); font: 600 14px var(--font); padding: 8px 14px 8px 8px; border-radius: var(--r-tag); cursor: default; }
+  .stepper .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-size: 12.5px; }
+  .stepper button.done { cursor: pointer; color: var(--ink); }
+  .stepper button.done .n { background: var(--accent-soft); color: var(--accent); }
+  .stepper button.current { border-color: var(--accent); color: var(--ink); }
+  .stepper button.current .n { background: var(--accent); color: var(--accent-ink); }
+  h1.title { font-size: clamp(28px, 3.4vw, 38px); letter-spacing: -0.03em; line-height: 1.1; margin: 0 0 8px; font-weight: 650; }
+  p.sub { color: var(--muted); margin: 0 0 26px; max-width: 60ch; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-box); padding: 24px; }
+  label.f { display: block; font-size: 14px; font-weight: 600; margin: 16px 0 6px; }
+  .help { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; }
+  input.t, select.t, textarea.t { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-ctl);
+    background: var(--bg); color: var(--ink); font: 15px var(--font); transition: border-color .2s var(--ease), box-shadow .2s var(--ease); }
+  input.t:focus, select.t:focus, textarea.t:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  textarea.t { min-height: 88px; resize: vertical; }
+  .error { color: var(--danger); font-size: 14px; margin-top: 10px; display: flex; gap: 8px; align-items: flex-start; }
+  .error:empty { display: none; }
+
+  /* step 1 */
+  .upload-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+  #drop { border: 2px dashed var(--line); border-radius: var(--r-box); padding: 44px 24px; text-align: center; cursor: pointer;
+          background: var(--bg); transition: border-color .2s var(--ease), background .2s var(--ease); }
+  #drop:hover, #drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  #drop .big { font-size: 34px; color: var(--accent); }
+  #drop strong { display: block; font-size: 17px; margin: 8px 0 4px; }
+  #drop span { color: var(--muted); font-size: 14px; }
+  .chips { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+  .chips li { display: flex; align-items: center; gap: 10px; background: var(--bg); border: 1px solid var(--line);
+              border-radius: var(--r-ctl); padding: 9px 10px 9px 12px; font-size: 14px; }
+  .chips li .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chips li .size { color: var(--muted); font-size: 12.5px; }
+  .icon-btn { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 6px; display: inline-flex; }
+  .icon-btn:hover { color: var(--danger); background: var(--danger-soft); }
+  .side-note { display: grid; gap: 16px; }
+  .side-note div { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: 14.5px; color: var(--muted); }
+  .side-note .i { color: var(--accent); margin-top: 3px; }
+  .link-btn { border: 0; background: none; color: var(--accent); font: 600 14.5px var(--font); cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* step 2 */
+  .review-grid { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start; }
+  .summary { position: sticky; top: 84px; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .parties h3, .panel h3 { font-size: 16px; margin: 0 0 4px; }
+  .check { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 14.5px; }
+  .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .inv-head, .inv-row { display: grid; grid-template-columns: 1.45fr 1.1fr 1.1fr 0.9fr 64px 30px; gap: 8px; align-items: center; }
+  .inv-head { font-size: 12.5px; color: var(--muted); font-weight: 600; margin: 18px 0 6px; }
+  .inv-row { margin-bottom: 8px; }
+  .inv-row label { display: none; }
+  .due-big { font-family: var(--mono); font-size: 38px; letter-spacing: -0.04em; line-height: 1.1; margin: 4px 0 16px; }
+  .breakdown { font-size: 14.5px; display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .breakdown div { display: flex; justify-content: space-between; gap: 12px; }
+  .breakdown .num { color: var(--ink); }
+  .options { margin: 18px 0 0; display: grid; gap: 8px; }
+  .opt { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; }
+  .opt .i { margin-top: 3px; } .opt.yes .i { color: var(--accent); } .opt.no { color: var(--muted); } .opt.no .i { color: var(--muted); }
+  .note { background: var(--warn-soft); color: var(--warn); border-radius: var(--r-ctl); padding: 10px 12px; font-size: 14px; margin: 10px 0 0;
+          display: grid; grid-template-columns: 20px 1fr; gap: 8px; }
+  .note .i { margin-top: 2px; }
+  details.more { border: 0; margin-top: 14px; }
+  details.more summary { padding: 6px 0; font-size: 14px; color: var(--muted); font-weight: 600; }
+  details.more ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+  .summary .btn { width: 100%; justify-content: center; margin-top: 18px; }
+
+  /* step 3 */
+  .letter-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+  .letter-doc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-box); box-shadow: var(--shadow);
+                padding: 36px 40px; white-space: pre-wrap; font-size: 15px; line-height: 1.65; min-height: 420px; }
+  .letter-actions { display: grid; gap: 10px; position: sticky; top: 84px; }
+  .letter-actions .btn { justify-content: center; }
+  .tabs { margin-bottom: 14px; }
+
+  /* loading skeletons */
+  .skel { display: grid; gap: 12px; }
+  .skel i { display: block; height: 14px; border-radius: 6px; background: var(--surface-2); }
+  .skel i.w60 { width: 60%; } .skel i.w80 { width: 80%; } .skel i.w40 { width: 40%; } .skel i.h30 { height: 30px; width: 50%; }
+  .status { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 14.5px; margin-bottom: 18px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .skel i { background: linear-gradient(90deg, var(--surface-2) 0%, var(--line) 50%, var(--surface-2) 100%); background-size: 200% 100%;
+              animation: shimmer 1.4s linear infinite; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    .step-panel:not([hidden]) { animation: swap .45s var(--ease) both; }
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #12151b; --card: #1b1f27; --text: #e6e9ef; --muted: #9aa3b2; --line: #2d333f;
-      --accent: #6f8ff7; --accent-text: #0d1016; --ok: #4cc38a; --warn: #f0b64a; --warn-bg: #2a2416;
-      --bad: #ff7a70; --soft: #222a3d;
-    }
+
+  @media (max-width: 900px) {
+    .upload-grid, .review-grid, .letter-grid, .parties { grid-template-columns: 1fr; }
+    .summary, .letter-actions { position: static; }
+    .letter-doc { padding: 24px 20px; }
+    .inv-head { display: none; }
+    .inv-row { grid-template-columns: 1fr 1fr; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 12px; }
+    .inv-row label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font-size: 26px; margin: 0 0 4px; }
-  h2 { font-size: 18px; margin: 0 0 12px; }
-  .sub { color: var(--muted); margin: 0 0 24px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
-  .step { display: inline-block; background: var(--soft); color: var(--accent); font-weight: 600;
-          border-radius: 999px; padding: 2px 10px; font-size: 13px; margin-bottom: 8px; }
-  #drop { border: 2px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center; cursor: pointer; color: var(--muted); }
-  #drop.over { border-color: var(--accent); background: var(--soft); }
-  #fileList { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
-  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
-  input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
-         background: var(--card); color: var(--text); font: inherit; }
-  textarea { min-height: 70px; resize: vertical; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
-  .check { display: flex; gap: 8px; align-items: center; margin-top: 8px; color: var(--text); font-size: 14px; }
-  .check input { width: auto; }
-  button { background: var(--accent); color: var(--accent-text); border: 0; border-radius: 8px; padding: 10px 18px;
-           font: inherit; font-weight: 600; cursor: pointer; margin-top: 14px; }
-  button.secondary { background: var(--soft); color: var(--accent); }
-  button:disabled { opacity: .5; cursor: wait; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  td input { padding: 5px 6px; }
-  .num { text-align: right; font-variant-numeric: tabular-nums; }
-  .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
-  .tile { background: var(--soft); border-radius: 10px; padding: 10px 12px; }
-  .tile b { display: block; font-size: 19px; font-variant-numeric: tabular-nums; }
-  .tile span { font-size: 12px; color: var(--muted); }
-  .note { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 8px 12px; margin: 8px 0 0; font-size: 14px; }
-  .ok { color: var(--ok); } .bad { color: var(--bad); }
-  ul.plain { margin: 6px 0 0; padding-left: 18px; }
-  pre { white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px;
-        font: 14px/1.55 Georgia, "Times New Roman", serif; margin: 8px 0 0; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .error { color: var(--bad); margin-top: 10px; }
-  .hidden { display: none; }
-  footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
-  footer a { color: var(--muted); }
-  .topbar { display: flex; justify-content: space-between; align-items: center; max-width: 860px; margin: 0 auto; padding: 14px 16px 0; }
-  .brand { font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
-  .brand span, .demo { color: var(--accent); }
-  .demo { font-size: 13px; font-weight: 600; background: var(--soft); border-radius: 999px; padding: 2px 10px; vertical-align: middle; }
-  .topbar nav a { margin-left: 16px; color: var(--muted); text-decoration: none; font-size: 14px; }
-  .privacy { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
 </style>
 </head>
 <body>
-<header class="topbar"><a class="brand" href="/">Dun<span>well</span></a>
-  <nav><a href="/">Home</a><a href="/privacy">Privacy</a></nav></header>
-<main>
-  <h1>Dunwell <small class="demo">demo</small></h1>
-  <p class="sub">Get paid by clients in the EU and the UK: upload the unpaid invoice, get a legally grounded demand letter in your client's language, and see which court procedure you can use next.</p>
+<header class="top"><div class="wrap">
+  <a class="brand" href="/"><span class="brand-mark">D</span>Dunwell</a>
+  <nav class="links"><a href="/">Home</a><a href="/privacy">Privacy</a></nav>
+</div></header>
 
-  <section class="card">
-    <div class="step">Step 1</div>
-    <h2>Upload the invoice and any emails</h2>
-    <div id="drop">Drop files here or click to choose<br><small>PDF, photo/screenshot or .txt/.eml. Several files are fine.</small></div>
-    <input id="fileInput" type="file" multiple accept=".pdf,image/*,.txt,.eml" class="hidden">
-    <ul id="fileList"></ul>
-    <button type="button" class="secondary" id="sampleBtn">No invoice at hand? Load a sample case</button>
-    <p class="privacy">🔒 Your files are only used to prepare your letter and are never stored. No cookies, no tracking.
-      Please only upload what's needed for the claim. <a href="/privacy">Privacy policy</a></p>
-    <label for="notes">Anything else we should know? (optional)</label>
-    <textarea id="notes" placeholder="E.g. 'Client stopped answering after I delivered the website in May. I sent two reminders.'"></textarea>
-    <button id="analyzeBtn">Analyse claim</button>
-    <div id="analyzeErr" class="error"></div>
-  </section>
+<main class="wrap app">
+  <ol class="stepper" aria-label="Progress">
+    <li><button type="button" data-go="1" class="current"><span class="n">1</span>Upload</button></li>
+    <li><button type="button" data-go="2"><span class="n">2</span>Check</button></li>
+    <li><button type="button" data-go="3"><span class="n">3</span>Letter</button></li>
+  </ol>
 
-  <section id="review" class="card hidden">
-    <div class="step">Step 2</div>
-    <h2>Check the details</h2>
-    <div class="grid">
-      <div>
-        <strong>You (creditor)</strong>
-        <label>Name</label><input data-f="creditor.name">
-        <label>Your name (signature)</label><input data-f="creditor.contact_person">
-        <label>Country</label><select data-f="creditor.country" class="countries"></select>
-        <label class="check"><input type="checkbox" data-f="creditor.is_business"> Business / self-employed</label>
-        <label>Bank details for payment</label><input data-f="creditor_bank" placeholder="IBAN / BIC">
+  <!-- 1. Upload -->
+  <section class="step-panel" id="step1">
+    <h1 class="title">Upload the unpaid invoice</h1>
+    <p class="sub">Add the invoice and any emails with your client. We read them in any EU language.</p>
+    <div class="upload-grid">
+      <div class="panel">
+        <div id="drop" role="button" tabindex="0" aria-describedby="dropHelp">
+          <div class="big">{{icon:file-arrow-up}}</div>
+          <strong>Drop files here or click to choose</strong>
+          <span id="dropHelp">PDF, photo, screenshot, .txt or .eml. Up to 6 files, 8 MB in total.</span>
+        </div>
+        <input id="fileInput" type="file" multiple accept=".pdf,image/*,.txt,.eml" hidden>
+        <ul class="chips" id="fileList"></ul>
+        <label class="f" for="notes">Anything we should know? (optional)</label>
+        <textarea class="t" id="notes" placeholder="For example: the client stopped replying after I delivered the website in May."></textarea>
+        <p class="help">Who is the client, what was delivered, and what have you already tried.</p>
+        <div class="error" id="analyzeErr" role="alert"></div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:18px">
+          <button class="btn" id="analyzeBtn" type="button">Read my documents {{icon:arrow-right}}</button>
+          <button class="link-btn" id="sampleBtn" type="button">Or load a sample case</button>
+        </div>
       </div>
-      <div>
-        <strong>Client (debtor)</strong>
-        <label>Name</label><input data-f="debtor.name">
-        <label>Country</label><select data-f="debtor.country" class="countries"></select>
-        <label class="check"><input type="checkbox" data-f="debtor.is_business"> Business</label>
-        <label>Type</label>
-        <select data-f="debtor.entity_type">
-          <option value="company">Company (Ltd, GmbH, SAS, BV…)</option>
-          <option value="sole_trader">Sole trader / self-employed</option>
-          <option value="individual">Private individual</option>
-        </select>
-        <label>Address</label><input data-f="debtor.address">
+      <div class="side-note">
+        <div>{{icon:lock-simple}}<span>Your files are only used to prepare your letter and are never stored.</span></div>
+        <div>{{icon:eye-slash}}<span>Only upload what the claim needs. You can remove a file before continuing.</span></div>
+        <div>{{icon:scales}}<span>Works for businesses in the EU and the UK. <a href="/privacy">Privacy policy</a></span></div>
       </div>
     </div>
-
-    <label style="margin-top:18px">Invoices</label>
-    <table>
-      <thead><tr><th>Invoice no.</th><th>Issue date</th><th>Due date</th><th class="num">Amount</th><th>Cur.</th></tr></thead>
-      <tbody id="invoiceRows"></tbody>
-    </table>
-
-    <label for="rate">Statutory late-payment interest (% per year)</label>
-    <input id="rate" type="number" step="0.01" style="max-width:140px">
-    <div id="rateNote" class="sub" style="font-size:12px;margin:4px 0 0"></div>
-
-    <div class="totals" id="totals"></div>
-    <label class="check" style="margin-top:14px"><input type="checkbox" data-f="disputed"> The client disputes the work or the amount</label>
-    <div id="dispute"></div>
-    <div id="warnings"></div>
-
-    <h2 style="margin-top:20px">Your options</h2>
-    <div id="procedures"></div>
   </section>
 
-  <section id="letterCard" class="card hidden">
-    <div class="step">Step 3</div>
-    <h2>Final demand letter</h2>
-    <div class="grid">
-      <div><label for="lang">Letter language (client's language)</label><select id="lang"></select></div>
-      <div><label for="note">Extra instruction (optional)</label><input id="note" placeholder="E.g. 'mention the project name ACME redesign'"></div>
-    </div>
-    <button id="letterBtn">Write demand letter</button>
-    <div id="letterErr" class="error"></div>
-    <div id="letterOut" class="hidden">
-      <p class="sub" id="deadlineInfo" style="margin:14px 0 0"></p>
-      <h3 id="localTitle" style="margin:16px 0 0;font-size:15px"></h3>
-      <pre id="letterLocal"></pre>
-      <div class="row"><button class="secondary" data-copy="letterLocal">Copy</button><button class="secondary" data-dl="letterLocal">Download .txt</button></div>
-      <h3 style="margin:18px 0 0;font-size:15px">English version (for your records)</h3>
-      <pre id="letterEn"></pre>
-      <div class="row"><button class="secondary" data-copy="letterEn">Copy</button><button class="secondary" data-dl="letterEn">Download .txt</button></div>
+  <!-- loading state between 1 and 2 -->
+  <section class="step-panel" id="loading" hidden>
+    <h1 class="title">Reading your documents</h1>
+    <p class="status" id="statusLine" aria-live="polite">Finding the parties, dates and amounts…</p>
+    <div class="review-grid">
+      <div class="panel skel"><i class="w40"></i><i></i><i class="w80"></i><i class="w60"></i><i></i><i class="w80"></i></div>
+      <div class="panel skel"><i class="w60"></i><i class="h30"></i><i></i><i class="w80"></i><i class="w60"></i></div>
     </div>
   </section>
 
-  <footer>Dunwell is a self-help tool, not legal advice. Check amounts, dates and the rules before sending.
-    Statutory interest and fixed compensation only apply between businesses.<br>
-    <a href="/">Home</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></footer>
+  <!-- 2. Check -->
+  <section class="step-panel" id="step2" hidden>
+    <h1 class="title">Check the details</h1>
+    <p class="sub">This is what we found. Fix anything that is wrong and the amounts update instantly.</p>
+    <div class="review-grid">
+      <div class="panel">
+        <div class="parties">
+          <div>
+            <h3>You</h3>
+            <label class="f" for="cName">Business name</label><input class="t" id="cName" data-f="creditor.name">
+            <label class="f" for="cPerson">Your name (signature)</label><input class="t" id="cPerson" data-f="creditor.contact_person">
+            <label class="f" for="cCountry">Country</label><select class="t countries" id="cCountry" data-f="creditor.country"></select>
+            <label class="f" for="cBank">Bank details for payment</label><input class="t" id="cBank" data-f="creditor_bank" placeholder="IBAN and BIC, or sort code and account">
+            <label class="check"><input type="checkbox" data-f="creditor.is_business"> I invoiced as a business or self-employed</label>
+          </div>
+          <div>
+            <h3>Your client</h3>
+            <label class="f" for="dName">Name</label><input class="t" id="dName" data-f="debtor.name">
+            <label class="f" for="dAddr">Address</label><input class="t" id="dAddr" data-f="debtor.address">
+            <label class="f" for="dCountry">Country</label><select class="t countries" id="dCountry" data-f="debtor.country"></select>
+            <label class="f" for="dType">Type</label>
+            <select class="t" id="dType" data-f="debtor.entity_type">
+              <option value="company">Company (Ltd, GmbH, SAS, BV…)</option>
+              <option value="sole_trader">Sole trader or self-employed</option>
+              <option value="individual">Private individual</option>
+            </select>
+            <label class="check"><input type="checkbox" data-f="debtor.is_business"> The client is a business</label>
+          </div>
+        </div>
+        <div class="inv-head" aria-hidden="true"><span>Invoice no.</span><span>Issued</span><span>Due</span><span>Amount</span><span>Currency</span><span></span></div>
+        <div id="invoiceRows"></div>
+        <button class="link-btn" id="addInvoice" type="button">+ Add another invoice</button>
+        <label class="check" style="margin-top:20px"><input type="checkbox" data-f="disputed"> The client disputes the work or the amount</label>
+        <div id="dispute"></div>
+      </div>
+
+      <aside class="panel summary" aria-live="polite">
+        <h3>You can claim</h3>
+        <div class="due-big" id="dueBig">€0.00</div>
+        <div class="breakdown" id="breakdown"></div>
+        <details class="more">
+          <summary>Interest rate: <span id="rateLabel"></span></summary>
+          <label class="f" for="rate">Annual rate in %</label>
+          <input class="t" id="rate" type="number" step="0.01" style="max-width:140px">
+          <p class="help" id="rateNote"></p>
+        </details>
+        <div class="options" id="options"></div>
+        <div id="warnings"></div>
+        <details class="more"><summary>What these options mean</summary><ul id="notesList"></ul></details>
+        <button class="btn" id="toLetter" type="button">Write the letter {{icon:arrow-right}}</button>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 3. Letter -->
+  <section class="step-panel" id="step3" hidden>
+    <h1 class="title">Your demand letter</h1>
+    <p class="sub" id="letterSub">Written in your client's language, with an English copy for your records.</p>
+    <div class="letter-grid">
+      <div>
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" id="tabLocal" type="button">Client's language</button>
+          <button role="tab" aria-selected="false" id="tabEn" type="button">English copy</button>
+        </div>
+        <div id="letterLoading" class="letter-doc skel" hidden><i class="w40"></i><i class="w60"></i><i></i><i></i><i class="w80"></i><i></i><i class="w60"></i><i class="w40"></i></div>
+        <article class="letter-doc" id="letterLocal"></article>
+        <article class="letter-doc" id="letterEn" hidden></article>
+        <div class="error" id="letterErr" role="alert"></div>
+      </div>
+      <div class="letter-actions">
+        <label class="f" for="lang" style="margin-top:0">Letter language</label>
+        <select class="t" id="lang"></select>
+        <label class="f" for="note">Extra instruction (optional)</label>
+        <input class="t" id="note" placeholder="For example: mention project ACME redesign">
+        <button class="btn ghost" id="rewrite" type="button">{{icon:arrow-counter-clockwise}} Rewrite letter</button>
+        <button class="btn" id="copyBtn" type="button">{{icon:copy}} Copy letter</button>
+        <button class="btn ghost" id="dlBtn" type="button">{{icon:download-simple}} Download .txt</button>
+        <p class="help" id="deadlineInfo"></p>
+        <button class="link-btn" id="restart" type="button" style="justify-self:start">Start a new claim</button>
+      </div>
+    </div>
+  </section>
 </main>
+
+<footer class="site"><div class="wrap">
+  <span>Dunwell is a self-help tool, not legal advice. Check every detail before sending.</span>
+  <nav><a href="/">Home</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav>
+</div></footer>
+
+<template id="tplRemove">{{icon:x}}</template>
+<template id="tplYes">{{icon:check-circle}}</template>
+<template id="tplNo">{{icon:x}}</template>
+<template id="tplWarn">{{icon:warning-circle}}</template>
 
 <script>
 const $ = (s) => document.querySelector(s);
-let files = [], state = null, meta = null, totalCost = 0, rateEdited = false;
+const tpl = (id) => document.getElementById(id).innerHTML;
+const MAX_FILES = 6, MAX_BYTES = 8 * 1024 * 1024;
+let files = [], state = null, meta = null, rateEdited = false, letter = null, reached = 1;
 const rateOverride = () => rateEdited ? $("#rate").value : null;
-
-const fmt = (n, cur) => (cur === "GBP" ? "£" : cur === "EUR" ? "€" : cur && cur !== "MIXED" ? cur + " " : "") +
-  Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (n, cur) => {
+  const v = Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return cur === "GBP" ? "£" + v : cur === "EUR" ? "€" + v : cur && cur !== "MIXED" ? `${cur} ${v}` : v;
+};
+const kb = (b) => b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
 
 async function api(path, body) {
   const res = await fetch(path, { method: body ? "POST" : "GET", headers: { "Content-Type": "application/json" },
                                   body: body ? JSON.stringify(body) : undefined });
-  const data = await res.json();
+  let data = {};
+  try { data = await res.json(); } catch { throw new Error("The server did not respond. Please try again."); }
   if (!res.ok) throw new Error(data.error || res.statusText);
-  if (data.cost) totalCost += data.cost;
   return data;
 }
+const showErr = (el, msg) => { el.innerHTML = msg ? tpl("tplWarn") + `<span>${esc(msg)}</span>` : ""; };
+
+// ---------- navigation between steps ----------
+function show(id) {
+  ["step1", "loading", "step2", "step3"].forEach((s) => $("#" + s).hidden = s !== id);
+  const cur = { step1: 1, loading: 2, step2: 2, step3: 3 }[id];
+  reached = Math.max(reached, cur);
+  document.querySelectorAll(".stepper button").forEach((b) => {
+    const n = +b.dataset.go;
+    b.className = n === cur ? "current" : n <= reached && state ? "done" : "";
+  });
+  window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+document.querySelectorAll(".stepper button").forEach((b) => b.addEventListener("click", () => {
+  if (!b.classList.contains("done")) return;
+  const n = +b.dataset.go;
+  if (n === 1) show("step1"); else if (n === 2) show("step2"); else if (n === 3 && letter) show("step3");
+}));
 
 // ---------- step 1: files ----------
 const drop = $("#drop"), input = $("#fileInput");
 drop.onclick = () => input.click();
+drop.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } };
 drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
 drop.ondragleave = () => drop.classList.remove("over");
 drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); };
-input.onchange = () => addFiles(input.files);
+input.onchange = () => { addFiles(input.files); input.value = ""; };
 
-function addFiles(list) {
+function renderFiles() {
+  $("#fileList").innerHTML = files.map((f, i) => `<li>${tpl("tplYes")}<span class="name">${esc(f.name)}</span>
+    <span class="size">${f.sample ? "sample" : kb(f.size)}</span>
+    <button class="icon-btn" type="button" data-remove="${i}" aria-label="Remove ${esc(f.name)}">${tpl("tplRemove")}</button></li>`).join("");
+}
+$("#fileList").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-remove]");
+  if (b) { files.splice(+b.dataset.remove, 1); renderFiles(); }
+});
+const readUrl = (blob) => new Promise((ok, fail) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = fail; r.readAsDataURL(blob); });
+
+async function addFiles(list) {
+  showErr($("#analyzeErr"), "");
   for (const f of list) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      let url = reader.result;
-      if (/\.(txt|eml)$/i.test(f.name)) url = url.replace(/^data:[^;]*;/, "data:text/plain;");
-      files.push({ name: f.name, data_url: url });
-      $("#fileList").innerHTML = files.map((x) => `<li>${esc(x.name)}</li>`).join("");
-    };
-    reader.readAsDataURL(f);
+    if (files.length >= MAX_FILES) { showErr($("#analyzeErr"), `You can add up to ${MAX_FILES} files.`); break; }
+    const total = files.reduce((s, x) => s + x.size, 0) + f.size;
+    if (total > MAX_BYTES) { showErr($("#analyzeErr"), `"${f.name}" is too large. The limit is 8 MB in total.`); continue; }
+    let url = await readUrl(f);
+    if (/\.(txt|eml)$/i.test(f.name)) url = url.replace(/^data:[^;]*;/, "data:text/plain;");
+    files.push({ name: f.name, size: f.size, data_url: url });
   }
+  renderFiles();
 }
 
 async function loadSample() {
-  const names = ["invoice_ES_to_DE.pdf", "emails_ES_to_DE.txt"];
-  files = [];
-  for (const n of names) {
+  files = []; showErr($("#analyzeErr"), "");
+  for (const n of ["invoice_ES_to_DE.pdf", "emails_ES_to_DE.txt"]) {
     const blob = await (await fetch("/examples/" + n)).blob();
-    const url = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
-    files.push({ name: n, data_url: n.endsWith(".txt") ? url.replace(/^data:[^;]*;/, "data:text/plain;") : url });
+    let url = await readUrl(blob);
+    if (n.endsWith(".txt")) url = url.replace(/^data:[^;]*;/, "data:text/plain;");
+    files.push({ name: n, size: blob.size, data_url: url, sample: true });
   }
-  $("#fileList").innerHTML = files.map((x) => `<li>${esc(x.name)} <small>(sample – fictitious)</small></li>`).join("");
-  $("#notes").value = "Sample case: Spanish designer, German client stopped replying after two reminders.";
+  renderFiles();
+  $("#notes").value = "Sample case (fictitious): Spanish designer, German client stopped replying after two reminders.";
 }
 $("#sampleBtn").onclick = loadSample;
 if (new URLSearchParams(location.search).get("sample")) loadSample();
 
+const STATUS = ["Finding the parties, dates and amounts…", "Checking which law applies…", "Working out interest and compensation…", "Almost done…"];
 $("#analyzeBtn").onclick = async () => {
-  if (!files.length && !$("#notes").value.trim()) { $("#analyzeErr").textContent = "Add at least one file."; return; }
-  const btn = $("#analyzeBtn"); btn.disabled = true; btn.textContent = "Reading documents…"; $("#analyzeErr").textContent = "";
+  if (!files.length && !$("#notes").value.trim()) { showErr($("#analyzeErr"), "Add the invoice first, or load a sample case."); return; }
+  showErr($("#analyzeErr"), "");
+  show("loading");
+  let i = 0; const timer = setInterval(() => { $("#statusLine").textContent = STATUS[Math.min(++i, STATUS.length - 1)]; }, 4000);
   try {
-    state = await api("/api/analyze", { files, notes: $("#notes").value });
-    renderReview();
-  } catch (e) { $("#analyzeErr").textContent = e.message; }
-  btn.disabled = false; btn.textContent = "Analyse claim";
+    state = await api("/api/analyze", { files: files.map(({ name, data_url }) => ({ name, data_url })), notes: $("#notes").value });
+    letter = null; reached = 2;
+    renderReview(); show("step2");
+  } catch (e) { show("step1"); showErr($("#analyzeErr"), e.message); }
+  finally { clearInterval(timer); $("#statusLine").textContent = STATUS[0]; }
 };
 
 // ---------- step 2: review ----------
-function get(obj, path) { return path.split(".").reduce((o, k) => (o || {})[k], obj); }
-function set(obj, path, v) { const ks = path.split("."); const last = ks.pop(); ks.reduce((o, k) => (o[k] ??= {}), obj)[last] = v; }
+const get = (o, p) => p.split(".").reduce((x, k) => (x || {})[k], o);
+const set = (o, p, v) => { const ks = p.split("."); const last = ks.pop(); ks.reduce((x, k) => (x[k] ??= {}), o)[last] = v; };
+
+function renderInvoices() {
+  const c = state.claim;
+  const field = (i, k, label, type, extra = "") => `<div><label for="inv${k}${i}">${label}</label>
+    <input class="t${k === "amount" ? " num" : ""}" id="inv${k}${i}" data-i="${i}" data-k="${k}" type="${type}" ${extra}
+      value="${esc(c.invoices[i][k] ?? "")}" aria-label="${label}"></div>`;
+  $("#invoiceRows").innerHTML = c.invoices.map((_, i) => `<div class="inv-row">
+      ${field(i, "number", "Invoice no.", "text")}${field(i, "issue_date", "Issued", "date")}${field(i, "due_date", "Due", "date")}
+      ${field(i, "amount", "Amount", "number", 'step="0.01" min="0"')}${field(i, "currency", "Currency", "text", 'maxlength="3"')}
+      <button class="icon-btn" type="button" data-del="${i}" aria-label="Remove invoice">${tpl("tplRemove")}</button></div>`).join("");
+}
+$("#invoiceRows").addEventListener("change", (e) => {
+  const el = e.target; if (!el.dataset.k) return;
+  state.claim.invoices[el.dataset.i][el.dataset.k] = el.dataset.k === "amount" ? parseFloat(el.value) || 0
+    : el.dataset.k === "currency" ? el.value.toUpperCase() : el.value;
+  recalc();
+});
+$("#invoiceRows").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-del]"); if (!b || state.claim.invoices.length < 2) return;
+  state.claim.invoices.splice(+b.dataset.del, 1); renderInvoices(); recalc();
+});
+$("#addInvoice").onclick = () => {
+  const last = state.claim.invoices.at(-1) || {};
+  state.claim.invoices.push({ number: "", issue_date: "", due_date: "", amount: 0, currency: last.currency || "EUR", description: "" });
+  renderInvoices();
+};
 
 function renderReview() {
   const c = state.claim;
   document.querySelectorAll("select.countries").forEach((s) => {
-    s.innerHTML = `<option value="">– choose –</option>` +
+    s.innerHTML = `<option value="">Choose a country</option>` +
       Object.entries(meta.countries).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
   });
   document.querySelectorAll("[data-f]").forEach((el) => {
@@ -241,24 +396,15 @@ function renderReview() {
     el.onchange = () => { set(c, el.dataset.f, el.type === "checkbox" ? el.checked : el.value);
                           if (el.dataset.f === "debtor.country") setLang(); recalc(); };
   });
-  $("#invoiceRows").innerHTML = c.invoices.map((inv, i) => `<tr>
-      <td><input data-i="${i}" data-k="number" value="${esc(inv.number)}"></td>
-      <td><input data-i="${i}" data-k="issue_date" type="date" value="${esc(inv.issue_date)}"></td>
-      <td><input data-i="${i}" data-k="due_date" type="date" value="${esc(inv.due_date)}"></td>
-      <td><input data-i="${i}" data-k="amount" type="number" step="0.01" class="num" value="${inv.amount}"></td>
-      <td><input data-i="${i}" data-k="currency" value="${esc(inv.currency)}" style="max-width:64px"></td></tr>`).join("");
-  document.querySelectorAll("#invoiceRows input").forEach((el) => el.onchange = () => {
-    c.invoices[el.dataset.i][el.dataset.k] = el.dataset.k === "amount" ? parseFloat(el.value) || 0 : el.value; recalc(); });
+  renderInvoices();
   rateEdited = false;
   $("#rate").onchange = () => { rateEdited = true; recalc(); };
-  $("#dispute").innerHTML = c.dispute_signals ? `<p class="note"><b>Dispute found in the documents:</b> ${esc(c.dispute_signals)}` +
+  $("#dispute").innerHTML = c.dispute_signals ? `<div class="note">${tpl("tplWarn")}<span><b>Found in your documents:</b> ${esc(c.dispute_signals)}` +
     (c.creditor_response_to_dispute ? `<br><b>Your answer:</b> ${esc(c.creditor_response_to_dispute)}` : "") +
-    `<br>The letter will address it. Untick the box above if it is resolved.</p>` : "";
+    `<br>The letter will address it. Untick the box if it is resolved.</span></div>` : "";
   $("#lang").innerHTML = Object.entries(meta.languages).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
   $("#lang").value = state.language || "en";
   renderCalc(state.calc);
-  $("#review").classList.remove("hidden"); $("#letterCard").classList.remove("hidden");
-  $("#review").scrollIntoView({ behavior: "smooth" });
 }
 
 function setLang() {
@@ -267,56 +413,75 @@ function setLang() {
   $("#lang").value = map[state.claim.debtor.country] || "en";
 }
 
-async function recalc() {
-  try { const r = await api("/api/recalc", { claim: state.claim, rate_override: rateOverride() }); renderCalc(r.calc); }
-  catch (e) { $("#analyzeErr").textContent = e.message; }
+let recalcTimer;
+function recalc() {
+  clearTimeout(recalcTimer);
+  recalcTimer = setTimeout(async () => {
+    try { renderCalc((await api("/api/recalc", { claim: state.claim, rate_override: rateOverride() })).calc); }
+    catch (e) { $("#warnings").innerHTML = `<div class="note">${tpl("tplWarn")}<span>${esc(e.message)}</span></div>`; }
+  }, 150);
 }
 
 function renderCalc(calc) {
   state.calc = calc;
-  const cur = calc.currency;
-  $("#totals").innerHTML = `
-    <div class="tile"><span>Unpaid invoices</span><b>${fmt(calc.principal, cur)}</b></div>
-    <div class="tile"><span>Statutory interest to date</span><b>${fmt(calc.interest, cur)}</b></div>
-    <div class="tile"><span>Fixed compensation</span><b>${fmt(calc.compensation, calc.compensation_currency)}</b></div>
-    <div class="tile"><span>Interest per day from now</span><b>${fmt(calc.daily_interest, cur)}</b></div>`;
-  $("#warnings").innerHTML = calc.warnings.map((w) => `<p class="note">${esc(w)}</p>`).join("");
-  const p = calc.procedures;
-  const mark = (ok) => ok ? `<span class="ok">✓ available</span>` : `<span class="bad">✗ not available</span>`;
-  $("#procedures").innerHTML = `<table><tbody>` +
-    p.options.map((o, i) => `<tr><td>${i + 1}. ${esc(o.name)}</td><td>${mark(o.available)}</td></tr>`).join("") +
-    `</tbody></table><ul class="plain">${p.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>`;
+  const cur = calc.currency, sameCur = cur === calc.compensation_currency;
+  $("#dueBig").textContent = sameCur ? money(calc.principal + calc.interest + calc.compensation, cur)
+                                     : money(calc.principal + calc.interest, cur);
+  $("#breakdown").innerHTML = `
+    <div><span>Unpaid invoices</span><span class="num">${money(calc.principal, cur)}</span></div>
+    <div><span>Statutory interest</span><span class="num">${money(calc.interest, cur)}</span></div>
+    <div><span>Fixed compensation</span><span class="num">${money(calc.compensation, calc.compensation_currency)}</span></div>
+    <div class="muted"><span>Interest per day from now</span><span class="num">${money(calc.daily_interest, cur)}</span></div>`;
   if (!rateEdited) $("#rate").value = calc.rate_percent || "";
-  $("#rateNote").textContent = (meta.rate_notes[calc.regime] || "") + (calc.law ? ` Law applied: ${calc.law} (your country's rules, unless your contract says otherwise).` : "");
+  $("#rateLabel").textContent = (rateEdited ? $("#rate").value : calc.rate_percent) + "% a year";
+  $("#rateNote").textContent = (meta.rate_notes[calc.regime] || "") + (calc.law ? ` Law applied: ${calc.law}.` : "");
+  const p = calc.procedures;
+  $("#options").innerHTML = p.options.map((o) => `<div class="opt ${o.available ? "yes" : "no"}">${tpl(o.available ? "tplYes" : "tplNo")}
+    <span>${esc(o.name)}${o.available ? "" : " (not available)"}</span></div>`).join("");
+  $("#notesList").innerHTML = p.notes.map((n) => `<li>${esc(n)}</li>`).join("");
+  $("#warnings").innerHTML = calc.warnings.map((w) => `<div class="note">${tpl("tplWarn")}<span>${esc(w)}</span></div>`).join("");
 }
 
 // ---------- step 3: letter ----------
-$("#letterBtn").onclick = async () => {
-  const btn = $("#letterBtn"); btn.disabled = true; btn.textContent = "Writing letter…"; $("#letterErr").textContent = "";
+async function writeLetter() {
+  $("#letterLoading").hidden = false; $("#letterLocal").hidden = true; $("#letterEn").hidden = true;
+  showErr($("#letterErr"), ""); $("#copyBtn").disabled = $("#dlBtn").disabled = $("#rewrite").disabled = true;
   try {
-    const r = await api("/api/letter", { claim: state.claim, rate_override: rateOverride(),
-                                        language: $("#lang").value, note: $("#note").value });
-    renderCalc(r.calc);
-    $("#localTitle").textContent = `${meta.languages[$("#lang").value]} – ${r.letter.subject_local}`;
+    const r = await api("/api/letter", { claim: state.claim, rate_override: rateOverride(), language: $("#lang").value, note: $("#note").value });
+    letter = r; renderCalc(r.calc);
     $("#letterLocal").textContent = `${r.letter.subject_local}\n\n${r.letter.letter_local}`;
     $("#letterEn").textContent = `${r.letter.subject_en}\n\n${r.letter.letter_en}`;
-    $("#deadlineInfo").textContent = `Payment deadline in the letter: ${r.deadline}. Send it by email and registered post, and keep a copy – you will need it as evidence.`;
-    $("#letterOut").classList.remove("hidden");
-  } catch (e) { $("#letterErr").textContent = e.message; }
-  btn.disabled = false; btn.textContent = "Write demand letter";
+    $("#tabLocal").textContent = meta.languages[$("#lang").value] || "Client's language";
+    $("#tabEn").hidden = $("#lang").value === "en";
+    const due = new Date(r.deadline + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    $("#deadlineInfo").textContent = `The letter asks for payment by ${due}. Send it by email and a trackable method, and keep a copy as evidence.`;
+    selectTab("local");
+  } catch (e) { showErr($("#letterErr"), e.message); }
+  finally { $("#letterLoading").hidden = true; $("#copyBtn").disabled = $("#dlBtn").disabled = $("#rewrite").disabled = false; }
+}
+function selectTab(which) {
+  $("#tabLocal").setAttribute("aria-selected", which === "local"); $("#tabEn").setAttribute("aria-selected", which === "en");
+  $("#letterLocal").hidden = which !== "local" || !letter; $("#letterEn").hidden = which !== "en" || !letter;
+}
+$("#tabLocal").onclick = () => selectTab("local");
+$("#tabEn").onclick = () => selectTab("en");
+$("#toLetter").onclick = () => { show("step3"); writeLetter(); };
+$("#rewrite").onclick = writeLetter;
+const visibleLetter = () => ($("#letterEn").hidden ? $("#letterLocal") : $("#letterEn")).textContent;
+$("#copyBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText(visibleLetter()); $("#copyBtn").lastChild.textContent = " Copied"; }
+  catch { $("#copyBtn").lastChild.textContent = " Select the text to copy"; }
+  setTimeout(() => $("#copyBtn").lastChild.textContent = " Copy letter", 1800);
 };
+$("#dlBtn").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([visibleLetter()], { type: "text/plain;charset=utf-8" }));
+  a.download = `demand-letter-${$("#letterEn").hidden ? $("#lang").value : "en"}.txt`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$("#restart").onclick = () => { files = []; state = null; letter = null; reached = 1; renderFiles(); $("#notes").value = ""; show("step1"); };
 
-document.addEventListener("click", (e) => {
-  const copy = e.target.dataset.copy, dl = e.target.dataset.dl;
-  if (copy) { navigator.clipboard.writeText($("#" + copy).textContent); e.target.textContent = "Copied"; setTimeout(() => e.target.textContent = "Copy", 1500); }
-  if (dl) {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([$("#" + dl).textContent], { type: "text/plain" }));
-    a.download = `demand-letter-${dl === "letterEn" ? "en" : $("#lang").value}.txt`; a.click();
-  }
-});
-
-api("/api/meta").then((m) => meta = m).catch((e) => $("#analyzeErr").textContent = e.message);
+api("/api/meta").then((m) => meta = m).catch((e) => showErr($("#analyzeErr"), e.message));
 </script>
 </body>
 </html>

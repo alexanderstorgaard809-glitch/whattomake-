@@ -10,6 +10,7 @@ Der logges kun metode, sti og statuskode (ingen IP-adresser, ingen indhold).
 
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -31,6 +32,15 @@ LAST_UPDATED = "28 September 2026"
 
 PAGES = {"/": "landing.html", "/app": "app.html", "/privacy": "privacy.html", "/terms": "terms.html"}
 ASSETS = {"/site.css": ("site.css", "text/css; charset=utf-8")}
+FONTS = STATIC / "fonts"
+ICONS = STATIC / "icons"
+ICON_RE = re.compile(r"\{\{icon:([a-z0-9-]+)\}\}")
+
+
+def icon(name):
+    """Phosphor-ikon (MIT) indsat som inline SVG, så der ikke hentes noget udefra."""
+    svg = (ICONS / f"{name}.svg").read_text(encoding="utf-8")
+    return svg.replace("<svg ", '<svg class="i" aria-hidden="true" focusable="false" ', 1)
 EXAMPLE_TYPES = {".pdf": "application/pdf", ".txt": "text/plain; charset=utf-8"}
 
 SECURITY_HEADERS = {
@@ -151,6 +161,7 @@ def render_page(name):
     }
     for k, v in values.items():
         html = html.replace("{{" + k + "}}", v)
+    html = ICON_RE.sub(lambda m: icon(m.group(1)), html)
     return html.encode("utf-8")
 
 
@@ -169,6 +180,10 @@ class Handler(BaseHTTPRequestHandler):
         if path in ASSETS:
             name, ctype = ASSETS[path]
             return self._send(200, (STATIC / name).read_bytes(), ctype, cache=True)
+        if path.startswith("/fonts/"):
+            f = FONTS / path[len("/fonts/"):]
+            if "/" not in path[len("/fonts/"):] and f.suffix == ".woff2" and f.is_file():
+                return self._send(200, f.read_bytes(), "font/woff2", cache=True)
         if path.startswith("/examples/"):
             name = path[len("/examples/"):]
             f = EXAMPLES / name

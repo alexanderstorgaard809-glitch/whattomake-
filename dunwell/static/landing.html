@@ -4,105 +4,230 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dunwell</title>
-<meta name="description" content="Client in another country not paying? Get a formal demand letter in your client's language, with the statutory interest and fixed compensation you're entitled to under EU and UK law.">
+<meta name="description" content="Upload an unpaid invoice and get a formal demand letter in your client's language, with the statutory interest and compensation EU and UK law gives you.">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <a class="brand" href="/">Dun<span>well</span></a>
-  <nav><a href="#how">How it works</a><a href="#faq">FAQ</a><a href="/app">Try the demo</a></nav>
+  <a class="brand" href="/"><span class="brand-mark">D</span>Dunwell</a>
+  <nav class="links">
+    <a class="hide-sm" href="#how">How it works</a>
+    <a class="hide-sm" href="#example">Example</a>
+    <a class="btn sm" href="/app">Try the demo</a>
+  </nav>
 </div></header>
 
-<main class="wrap">
-  <div class="hero">
-    <div class="badge">Free demo · EU &amp; UK</div>
-    <h1>Stop chasing. Start stating the rules.</h1>
-    <p>Client ghosting you on an invoice? Upload it and get a formal demand letter in <b>your client's language</b>, with the statutory interest and fixed compensation you're entitled to by law and the exact next step if they still don't pay.</p>
-    <a class="btn" href="/app">Try the free demo</a>
-    <a class="btn secondary" href="/app?sample=1">Try it with a sample invoice</a>
+<main>
+  <div class="wrap hero">
+    <div>
+      <h1 class="rise" style="--d:0">Stop chasing.<br><em>Start stating the rules.</em></h1>
+      <p class="lead rise" style="--d:1">Upload an unpaid invoice. Get a formal demand letter in your client's language, with the interest the law gives you.</p>
+      <div class="actions rise" style="--d:2">
+        <a class="btn" href="/app">Try the demo {{icon:arrow-right}}</a>
+        <a class="btn ghost" href="#example">See an example</a>
+      </div>
+    </div>
+    <div class="doc-stack rise" style="--d:3">
+      <article class="doc" aria-label="Excerpt of a letter written by Dunwell for a fictitious UK test case">
+        <div class="doc-head"><span>Maya Hart Social, Manchester</span><span>28 September 2026</span></div>
+        <h3>Letter before claim: outstanding invoice MH-052</h3>
+        <p>Dear Dan Price,</p>
+        <p>Invoice MH-052 fell due on 30 June 2026 and remains unpaid despite six reminders. Under the Late Payment of Commercial Debts (Interest) Act 1998, I am entitled to statutory interest and fixed sum compensation.</p>
+        <div class="sum num">
+          <div><span>Principal</span><span>£2,030.00</span></div>
+          <div><span>Statutory interest</span><span>£58.81</span></div>
+          <div><span>Fixed compensation</span><span>£70.00</span></div>
+          <div class="total"><span>Total due by 12 October</span><span>£2,158.81</span></div>
+        </div>
+        <div class="fade"></div>
+      </article>
+    </div>
   </div>
 
-  <section>
-    <div class="grid2">
-      <div class="card">
-        <h3>The awkward part</h3>
-        <p>Weeks of polite reminders, WhatsApp messages that never get read, and a client abroad who assumes you won't bother. A lawyer costs more than the invoice.</p>
-      </div>
-      <div class="card">
-        <h3>What most freelancers don't know</h3>
-        <p>Businesses that pay late owe you statutory interest plus a fixed sum per invoice (€40 in the EU, £40–£100 in the UK). Spelling that out in one formal letter changes the conversation.</p>
+  <section class="block" style="padding-top:24px">
+    <div class="wrap">
+      <div class="band reveal">
+        <h2>A business that pays late owes you more than the invoice.</h2>
+        <div class="fig"><b>+8%</b><span>statutory interest per year, above the central bank rate</span></div>
+        <div class="fig"><b>€40</b><span>fixed compensation per late invoice in the EU</span></div>
+        <div class="fig"><b>£40-100</b><span>fixed compensation per late invoice in the UK</span></div>
       </div>
     </div>
   </section>
 
-  <section id="how">
-    <h2>How it works</h2>
-    <div class="grid3">
-      <div class="card"><div class="num">1</div><h3>Upload</h3><p>Drop in the unpaid invoice (PDF or screenshot) and any emails. Any EU language works.</p></div>
-      <div class="card"><div class="num">2</div><h3>Check</h3><p>See the interest, the fixed compensation and which legal route you have. You can edit every detail.</p></div>
-      <div class="card"><div class="num">3</div><h3>Send</h3><p>Get a formal letter in your client's language, plus an English copy for your records.</p></div>
+  <section class="block" id="how">
+    <div class="wrap steps-layout">
+      <div class="sticky">
+        <h2>From unpaid invoice to formal letter in minutes.</h2>
+        <p class="intro">No account and no lawyer. You stay in control of every detail before anything is sent.</p>
+        <a class="btn" href="/app">Try the demo {{icon:arrow-right}}</a>
+      </div>
+      <ol class="steps">
+        <li class="reveal"><span class="ico">{{icon:file-arrow-up}}</span>
+          <div><h3>Upload</h3><p>Drop in the invoice as a PDF or screenshot, plus any emails with your client. Any EU language works.</p></div></li>
+        <li class="reveal"><span class="ico">{{icon:calculator}}</span>
+          <div><h3>Check</h3><p>See the interest, the fixed compensation and your legal options. Edit anything the AI got wrong.</p></div></li>
+        <li class="reveal"><span class="ico">{{icon:envelope-simple}}</span>
+          <div><h3>Send</h3><p>Copy the letter in your client's language, keep the English version for your records, and send it yourself.</p></div></li>
+      </ol>
     </div>
   </section>
 
-  <section>
-    <h2>What's in your letter</h2>
-    <div class="grid2">
-      <ul class="check">
-        <li>Written natively in your client's language (22 languages)</li>
-        <li>Statutory interest and fixed compensation, calculated exactly, not by AI</li>
-        <li>The right legal references (EU Late Payment Directive or UK Late Payment Act)</li>
-      </ul>
-      <ul class="check">
-        <li>Handles a dispute calmly if the client has complained</li>
-        <li>A clear deadline and the correct next step: EU payment order, small claims or Money Claim Online</li>
-        <li>Your name, bank details and a proper business-letter layout</li>
-      </ul>
+  <section class="block">
+    <div class="wrap">
+      <h2>What goes into every letter</h2>
+      <p class="intro">The tone of a lawyer's letter, the numbers of an accountant, written in the language your client reads.</p>
+      <div class="bento">
+        <div class="cell c-lang reveal">
+          <div><span class="ico">{{icon:translate}}</span></div>
+          <div>
+            <h3>Your client's language</h3>
+            <p>Written natively, not translated word for word. 22 EU languages, plus English for the UK and Ireland.</p>
+          </div>
+          <div class="tags">
+            <span class="tag">Deutsch</span><span class="tag">Français</span><span class="tag">Español</span><span class="tag">Italiano</span>
+            <span class="tag">Nederlands</span><span class="tag">Polski</span><span class="tag">Svenska</span><span class="tag">Português</span>
+            <span class="tag">Suomi</span><span class="tag">+13 more</span>
+          </div>
+        </div>
+        <div class="cell c-math reveal">
+          <div><span class="ico">{{icon:calculator}}</span></div>
+          <div><h3>Exact amounts</h3><p>Calculated by fixed legal rules, never guessed by the AI.</p></div>
+          <div class="mini-sum"><div><span>Invoice</span><span>€3,650.00</span></div><div><span>Interest</span><span>€92.56</span></div>
+            <div><span>Compensation</span><span>€40.00</span></div><div class="t"><span>Due</span><span>€3,782.56</span></div></div>
+        </div>
+        <div class="cell c-dispute reveal">
+          <div><span class="ico">{{icon:scales}}</span></div>
+          <div><h3>Answers complaints</h3><p>If your client disputed the work, the letter addresses it calmly with your side of the facts.</p></div>
+        </div>
+        <div class="cell c-route reveal">
+          <div><span class="ico">{{icon:gavel}}</span></div>
+          <div><h3>The right next step</h3><p>European payment order, European small claims, or Money Claim Online in the UK.</p></div>
+        </div>
+        <div class="cell c-layout reveal">
+          <div><span class="ico">{{icon:file-text}}</span></div>
+          <div><h3>Ready to send</h3><p>A proper business letter with your name, bank details and a firm deadline.</p></div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section>
-    <h2>Example</h2>
-    <p style="color:var(--muted)">A Dutch developer is owed €7,800 by a French company that complained about a bug. This excerpt is from a fictitious test case.</p>
-    <div class="letter">Objet : Mise en demeure de payer – Facture VD-0412
-
-Madame,
-
-Sauf erreur ou omission de notre part, nous constatons que la facture n° VD-0412, émise le 15 avril 2026 et arrivée à échéance le 15 mai 2026, demeure impayée à ce jour.
-
-Vous avez fait état de signalements de clients concernant des blocages lors de l'étape de paiement sur certains téléphones Android. Ce dysfonctionnement a été corrigé dans la version 2.0.3 déployée le 20 mai 2026. La prestation étant pleinement exécutée, le montant facturé est désormais exigible dans son intégralité.
-
-Le décompte des sommes dues s'établit comme suit :
-Principal : 7 800,00 €
-Intérêts de retard légaux : 302,26 €
-Indemnité forfaitaire de compensation : 40,00 €
-Montant total dû : 8 142,26 €
-
-À défaut de réception du paiement intégral à cette date, nous engagerons des poursuites judiciaires devant la juridiction compétente…</div>
-  </section>
-
-  <section>
-    <h2>Your data</h2>
-    <div class="grid3">
-      <div class="card"><h3>Never stored</h3><p>Your files are processed only to write your letter and are deleted from memory right after. No accounts, no database.</p></div>
-      <div class="card"><h3>No tracking</h3><p>No cookies, no analytics, no ads. Nothing is shared or sold.</p></div>
-      <div class="card"><h3>No AI training</h3><p>We only route to AI providers that don't retain your data or train on it.</p></div>
+  <section class="block" id="example">
+    <div class="wrap">
+      <h2>Read a real output</h2>
+      <p class="intro">Two letters Dunwell wrote for fictitious test cases, unedited.</p>
+      <div class="tabs" role="tablist" aria-label="Example letters">
+        <button role="tab" aria-selected="true" aria-controls="ex-fr" id="tab-fr">French client</button>
+        <button role="tab" aria-selected="false" aria-controls="ex-uk" id="tab-uk">UK client</button>
+      </div>
+      <div class="example-grid">
+        <div>
+          <article class="doc" id="ex-fr" role="tabpanel" aria-labelledby="tab-fr">
+            <div class="doc-head"><span>Van Dijk App Development, Amsterdam</span><span>28 septembre 2026</span></div>
+            <h3>Objet : mise en demeure de payer, facture VD-0412</h3>
+            <p>Madame,</p>
+            <p>Sauf erreur ou omission de notre part, nous constatons que la facture n° VD-0412, émise le 15 avril 2026 et arrivée à échéance le 15 mai 2026, demeure impayée à ce jour.</p>
+            <p>Vous avez fait état de signalements de clients concernant des blocages lors de l'étape de paiement sur certains téléphones Android. Ce dysfonctionnement a été corrigé dans la version 2.0.3 déployée le 20 mai 2026. La prestation étant pleinement exécutée, le montant facturé est désormais exigible dans son intégralité.</p>
+            <div class="sum num">
+              <div><span>Principal</span><span>7 800,00 €</span></div>
+              <div><span>Intérêts de retard (10,4 %)</span><span>302,26 €</span></div>
+              <div><span>Indemnité forfaitaire</span><span>40,00 €</span></div>
+              <div class="total"><span>Montant total dû</span><span>8 142,26 €</span></div>
+            </div>
+            <p style="margin-top:14px">À défaut de paiement intégral au plus tard le 12 octobre 2026, nous engagerons des poursuites judiciaires devant la juridiction compétente, sans nouvel avis.</p>
+            <div class="fade"></div>
+          </article>
+          <article class="doc" id="ex-uk" role="tabpanel" aria-labelledby="tab-uk" hidden>
+            <div class="doc-head"><span>Maya Hart Social, Manchester</span><span>28 September 2026</span></div>
+            <h3>Letter before claim: outstanding invoice MH-052</h3>
+            <p>Dear Dan Price,</p>
+            <p>I am writing regarding invoice MH-052, dated 31 May 2026, which fell due on 30 June 2026. It covers social media management for May and the pro-rata notice period in June.</p>
+            <p>Despite a reminder on 3 July and five further reminders by email and WhatsApp, the invoice remains unpaid and is now 90 days overdue. Under the Late Payment of Commercial Debts (Interest) Act 1998, I am entitled to statutory interest at 8% above the Bank of England base rate and to fixed sum compensation under section 5A.</p>
+            <div class="sum num">
+              <div><span>Principal</span><span>£2,030.00</span></div>
+              <div><span>Statutory interest (11.75%)</span><span>£58.81</span></div>
+              <div><span>Fixed compensation</span><span>£70.00</span></div>
+              <div class="total"><span>Total due</span><span>£2,158.81</span></div>
+            </div>
+            <p style="margin-top:14px">If payment is not received by 12 October 2026, I intend to issue a claim in the County Court through Money Claim Online, without further notice.</p>
+            <div class="fade"></div>
+          </article>
+        </div>
+        <div class="example-notes" id="notes-fr">
+          <div>{{icon:check-circle}}<span>Formal French register, from "Sauf erreur ou omission" to the closing.</span></div>
+          <div>{{icon:check-circle}}<span>The client's complaint about a bug is answered with the fix and its date.</span></div>
+          <div>{{icon:check-circle}}<span>Because the claim is disputed, it points to court rather than a payment order.</span></div>
+        </div>
+        <div class="example-notes" id="notes-uk" hidden>
+          <div>{{icon:check-circle}}<span>A proper letter before claim, as English courts expect.</span></div>
+          <div>{{icon:check-circle}}<span>Compensation of £70, the correct band for an invoice between £1,000 and £9,999.</span></div>
+          <div>{{icon:check-circle}}<span>Interest based on the Bank of England rate that applies to this invoice.</span></div>
+        </div>
+      </div>
     </div>
-    <p style="margin-top:14px"><a href="/privacy">Read the privacy policy</a></p>
   </section>
 
-  <section id="faq">
-    <h2>FAQ</h2>
-    <details><summary>Is this legal advice?</summary><p>No. Dunwell is a self-help tool that prepares a letter based on the documents you provide. Check the details before you send anything, and talk to a lawyer if the case is complex or large.</p></details>
-    <details><summary>Which countries does it cover?</summary><p>Businesses in the 27 EU countries and the United Kingdom. The statutory rules usually follow your country, and the court route follows your client's country. Your contract can change that.</p></details>
-    <details><summary>Does it work if my client is a consumer?</summary><p>The statutory interest and fixed compensation only apply between businesses. For private clients the letter only demands the invoiced amount.</p></details>
-    <details><summary>What does it cost?</summary><p>The demo is free while we test it. It has a small usage limit per hour.</p></details>
-    <details><summary>Will it send the letter for me?</summary><p>No. You get the text to send yourself, ideally by email and a trackable method, and you keep a copy as evidence.</p></details>
+  <section class="block">
+    <div class="wrap">
+      <h2>Your invoices stay yours</h2>
+      <p class="intro">Built for documents with names, addresses and bank details in them.</p>
+      <div class="privacy-row reveal">
+        <div><span class="ico">{{icon:eye-slash}}</span><div><h3>Never stored</h3><p>Files are processed in memory to write your letter and gone right after. No accounts, no database.</p></div></div>
+        <div><span class="ico">{{icon:cookie}}</span><div><h3>No tracking</h3><p>No cookies, analytics or ads. This site loads nothing from third parties.</p></div></div>
+        <div><span class="ico">{{icon:shield-check}}</span><div><h3>No AI training</h3><p>Requests only go to AI providers that keep no data and do not train on it.</p></div></div>
+      </div>
+      <p style="margin-top:22px"><a href="/privacy">Read the privacy policy</a></p>
+    </div>
+  </section>
+
+  <section class="block" id="faq">
+    <div class="wrap faq">
+      <h2>Questions</h2>
+      <details><summary>Is this legal advice? {{icon:caret-down}}</summary><p>No. Dunwell is a self-help tool that prepares a letter from the documents you provide. Check the details before sending, and talk to a lawyer for large or complex cases.</p></details>
+      <details><summary>Which countries does it cover? {{icon:caret-down}}</summary><p>Businesses in the 27 EU countries and the United Kingdom. The statutory rules usually follow your country and the court route follows your client's country, unless your contract says otherwise.</p></details>
+      <details><summary>What if my client is a consumer? {{icon:caret-down}}</summary><p>Statutory late-payment interest and fixed compensation only apply between businesses. For private clients the letter demands the invoiced amount only.</p></details>
+      <details><summary>What does it cost? {{icon:caret-down}}</summary><p>The demo is free while we test it, with a small limit per hour.</p></details>
+      <details><summary>Does Dunwell send the letter? {{icon:caret-down}}</summary><p>No. You send it yourself, ideally by email and a trackable method, and keep a copy as evidence.</p></details>
+    </div>
+  </section>
+
+  <section class="block" style="padding-top:0">
+    <div class="wrap">
+      <div class="closing reveal">
+        <h2>Got an unpaid invoice? Get the letter today.</h2>
+        <a class="btn" href="/app">Try the demo {{icon:arrow-right}}</a>
+      </div>
+    </div>
   </section>
 </main>
 
 <footer class="site"><div class="wrap">
-  <a href="/app">Demo</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:{{CONTACT_EMAIL}}">Contact</a>
-  <p>Dunwell is a demo by {{OPERATOR_NAME}}. It is not a law firm and does not give legal advice.</p>
+  <span>Dunwell by {{OPERATOR_NAME}}. Not a law firm, no legal advice.</span>
+  <nav><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:{{CONTACT_EMAIL}}">Contact</a></nav>
 </div></footer>
+
+<script>
+// Scroll-reveal (IntersectionObserver, no scroll listeners). Skipped entirely under reduced motion.
+if (matchMedia("(prefers-reduced-motion: no-preference)").matches && "IntersectionObserver" in window) {
+  const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+    if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+  }), { threshold: 0.15 });
+  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+} else {
+  document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
+}
+// Example tabs
+const tabs = [["tab-fr", "ex-fr", "notes-fr"], ["tab-uk", "ex-uk", "notes-uk"]];
+tabs.forEach(([t]) => document.getElementById(t).addEventListener("click", () => {
+  tabs.forEach(([tt, panel, notes]) => {
+    const on = tt === t;
+    document.getElementById(tt).setAttribute("aria-selected", on);
+    document.getElementById(panel).hidden = !on;
+    document.getElementById(notes).hidden = !on;
+    if (on) { const p = document.getElementById(panel); p.classList.remove("swap"); void p.offsetWidth; p.classList.add("swap"); }
+  });
+}));
+</script>
 </body>
 </html>

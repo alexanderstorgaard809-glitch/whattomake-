@@ -68,6 +68,13 @@ Hvis AI-kald fejler med "no endpoints", findes der ingen udbyder med zero data r
 
 Satsen kan også rettes direkte på siden.
 
+## Design
+
+Siderne bruger et eget lille designsystem i `static/site.css`: én accentfarve (smaragdgrøn), faste radier, lys og mørk tilstand efter systemets indstilling, og bevægelse, der slås fra ved `prefers-reduced-motion`. Font og ikoner ligger på vores egen server, så siden henter intet fra tredjeparter:
+
+- Font: [Geist](https://vercel.com/font) (SIL Open Font License), se `static/fonts/LICENSE.txt`
+- Ikoner: [Phosphor Icons](https://phosphoricons.com) (MIT), se `static/icons/LICENSE-phosphor.txt`. Skriv `{{icon:navn}}` i en side, så indsætter serveren ikonet.
+
 ## Test
 
 ```
