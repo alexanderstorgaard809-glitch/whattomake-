@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dunwell motion graphic</title>
+<!--
+  Deterministic motion graphic. Every frame is state = f(t): nothing depends on
+  the previous frame, so render_video.py can capture frames in any order.
+  ?f=16x9 (1920x1080) or ?f=9x16 (1080x1920). Open in a browser and add
+  &play=1 to preview in real time.
+-->
+<style>
+@font-face{font-family:Geist;src:url(../static/fonts/Geist-Variable.woff2) format("woff2");font-weight:100 900}
+@font-face{font-family:GeistMono;src:url(../static/fonts/GeistMono-Variable.woff2) format("woff2");font-weight:100 900}
+html,body{margin:0;background:#0e1011;overflow:hidden}
+svg{display:block}
+text{font-family:Geist,system-ui,sans-serif}
+.mono{font-family:GeistMono,ui-monospace,monospace}
+</style>
+</head>
+<body>
+<svg id="s" xmlns="http://www.w3.org/2000/svg"></svg>
+<script>
+const Q = new URLSearchParams(location.search);
+const V = Q.get('f') === '9x16';
+const W = V ? 1080 : 1920, H = V ? 1920 : 1080;
+const DUR = 20;
+window.DURATION = DUR; window.SIZE = [W, H];
+
+const svg = document.getElementById('s');
+svg.setAttribute('width', W); svg.setAttribute('height', H);
+svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs = {}, parent = svg, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  parent.appendChild(e);
+  return e;
+}
+const set = (e, a) => { for (const k in a) e.setAttribute(k, a[k]); };
+
+const C = {
+  bg: '#0e1011', ink: '#f3f5f4', dim: '#8a938f', paper: '#fbfaf7', paperInk: '#1a1d1c',
+  grey: '#7a807d', bar: '#e6e3dd', acc: '#3fcf95', accDeep: '#0b7650', warn: '#ff8a5c'
+};
+
+/* ---------- timing helpers (all pure) ---------- */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const eOut = p => 1 - Math.pow(1 - p, 3);
+const eIn = p => p * p * p;
+const eInOut = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const eOutBack = (p, s = 1.4) => 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+// Damped response to a contact at t0: full amplitude on impact, then settles.
+const ring = (t, t0, amp, w = 26, k = 9) => t < t0 ? 0 : amp * Math.exp(-k * (t - t0)) * Math.cos(w * (t - t0));
+// Same, but starting from zero (a push that follows a hit).
+const bump = (t, t0, amp, w = 20, k = 8) => t < t0 ? 0 : amp * Math.exp(-k * (t - t0)) * Math.sin(w * (t - t0));
+const bez = (p, a, c, b) => [
+  (1 - p) * (1 - p) * a[0] + 2 * (1 - p) * p * c[0] + p * p * b[0],
+  (1 - p) * (1 - p) * a[1] + 2 * (1 - p) * p * c[1] + p * p * b[1]];
+const bezD = (p, a, c, b) => [
+  2 * (1 - p) * (c[0] - a[0]) + 2 * p * (b[0] - c[0]),
+  2 * (1 - p) * (c[1] - a[1]) + 2 * p * (b[1] - c[1])];
+/* Fall under gravity, stretch with speed, squash on contact. Impact amplitude
+   scales with the drop height so a longer fall lands harder. */
+function drop(t, t0, t1, h, amp = .12) {
+  if (t < t1) {
+    const p = prog(t, t0, t1), st = .07 * p * p;
+    return { y: -h * (1 - p * p), sx: 1 / Math.sqrt(1 + st), sy: 1 + st };
+  }
+  const q = ring(t, t1, amp * clamp(h / 600, .4, 1.4));
+  return { y: 0, sx: 1 + q * .7, sy: 1 - q };
+}
+// Transform about a contact point b px below the local origin, so squash keeps the base planted.
+const tf = (x, y, { r = 0, sx = 1, sy = 1, s = 1, b = 0 } = {}) =>
+  `translate(${x} ${y + b}) rotate(${r}) scale(${sx * s} ${sy * s}) translate(0 ${-b})`;
+const money = v => '€' + v.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/* ---------- layout per format ---------- */
+const L = V
+  ? { hx: 90, hy: 318, hw: 900, fs: 94, lh: 1.06, ky: 262, kfs: 24, vx: 540, vy: 1235, vs: 1.2, bx: 90, by: 150, bfs: 40 }
+  : { hx: 140, hy: 392, hw: 720, fs: 84, lh: 1.08, ky: 340, kfs: 22, vx: 1330, vy: 505, vs: 1, bx: 140, by: 132, bfs: 36 };
+
+const SC = [
+  { t0: 0.0, t1: 3.4, k: 'The problem', w: 'Your client stopped paying.', hl: ['stopped', 'paying.'], c: C.warn },
+  { t0: 3.4, t1: 6.6, k: 'The rules', w: 'The law says they owe you more.', hl: ['more.'] },
+  { t0: 6.6, t1: 9.8, k: 'The maths', w: 'Dunwell works it out to the cent.', hl: ['Dunwell'] },
+  { t0: 9.8, t1: 13.6, k: 'The letter', w: "A formal demand in your client's language.", hl: ['language.'] },
+  { t0: 13.6, t1: 16.4, k: 'The result', w: 'Send it. Get paid.', hl: ['paid.'] },
+];
+
+const LANGS = [
+  { code: 'DE', title: 'Zahlungsaufforderung', label: 'Offener Betrag', amt: '3.782,56 €', at: 0 },
+  { code: 'FR', title: 'Mise en demeure', label: 'Montant dû', amt: '3 782,56 €', at: 12.3 },
+  { code: 'ES', title: 'Requerimiento de pago', label: 'Importe adeudado', amt: '3.782,56 €', at: 12.62 },
+  { code: 'IT', title: 'Diffida di pagamento', label: 'Importo dovuto', amt: '3.782,56 €', at: 12.94 },
+  { code: 'NL', title: 'Ingebrekestelling', label: 'Openstaand bedrag', amt: '€ 3.782,56', at: 13.26 },
+];
+
+let R = {};
+
+function build() {
+  const defs = el('defs');
+  defs.innerHTML = `
+    <radialGradient id="glow"><stop offset="0" stop-color="${C.acc}" stop-opacity=".17"/><stop offset=".55" stop-color="${C.acc}" stop-opacity=".05"/><stop offset="1" stop-color="${C.acc}" stop-opacity="0"/></radialGradient>
+    <pattern id="dots" width="36" height="36" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.4" fill="#fff" fill-opacity=".055"/></pattern>
+    <filter id="sh" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="26" stdDeviation="30" flood-color="#000" flood-opacity=".5"/></filter>
+    <filter id="sh2" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".4"/></filter>
+    <linearGradient id="scanG" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${C.acc}" stop-opacity="0"/><stop offset="1" stop-color="${C.acc}" stop-opacity=".32"/></linearGradient>
+    <clipPath id="cardClip"><rect x="-250" y="-320" width="500" height="640" rx="18"/></clipPath>`;
+
+  el('rect', { width: W, height: H, fill: C.bg });
+  el('rect', { width: W, height: H, fill: 'url(#dots)' });
+  R.glow = el('circle', { cx: L.vx, cy: L.vy, r: 760, fill: 'url(#glow)' });
+
+  // Persistent wordmark
+  R.brand = el('text', { x: L.bx, y: L.by, 'font-size': L.bfs, 'font-weight': 700, fill: C.ink, 'letter-spacing': -L.bfs * .03 }, svg, 'Dunwell');
+
+  // Headlines: one <text> per word so each word can rise on its own offset.
+  R.heads = SC.map((sc, si) => {
+    const g = el('g', { opacity: 0 });
+    const k = el('text', { x: L.hx, y: L.ky, class: 'mono', 'font-size': L.kfs, 'font-weight': 500, 'letter-spacing': 3, fill: C.dim }, g);
+    el('tspan', { fill: C.acc }, k, `0${si + 1}`);
+    el('tspan', {}, k, `  ${sc.k.toUpperCase()}`);
+    const words = []; let cx = 0, line = 0;
+    for (const w of sc.w.split(' ')) {
+      const e = el('text', { 'font-size': L.fs, 'font-weight': 680, 'letter-spacing': -L.fs * .03, fill: sc.hl.includes(w) ? (sc.c || C.acc) : C.ink }, g, w);
+      const len = e.getComputedTextLength();
+      if (cx > 0 && cx + len > L.hw) { cx = 0; line++; }
+      words.push({ e, x: L.hx + cx, y: L.hy + L.fs + line * L.fs * L.lh });
+      cx += len + L.fs * .25;
+    }
+    return { g, k, words, sc };
+  });
+
+  const vis = el('g', { transform: `translate(${L.vx} ${L.vy}) scale(${L.vs})` });
+
+  /* Invoice */
+  R.inv = el('g', {}, vis);
+  const inv = R.inv;
+  el('rect', { x: -250, y: -320, width: 500, height: 640, rx: 18, fill: C.paper, filter: 'url(#sh)' }, inv);
+  el('text', { x: -205, y: -248, class: 'mono', 'font-size': 19, 'font-weight': 600, 'letter-spacing': 4, fill: C.grey }, inv, 'INVOICE');
+  el('text', { x: 205, y: -248, class: 'mono', 'font-size': 19, 'text-anchor': 'end', fill: C.grey }, inv, 'INV-2026-041');
+  el('text', { x: -205, y: -190, 'font-size': 30, 'font-weight': 720, fill: C.paperInk, 'letter-spacing': -.6 }, inv, 'Studio Nord');
+  el('rect', { x: -205, y: -170, width: 190, height: 10, rx: 5, fill: C.bar }, inv);
+  el('text', { x: -205, y: -116, 'font-size': 18, fill: C.grey }, inv, 'Bill to');
+  el('text', { x: -205, y: -88, 'font-size': 24, 'font-weight': 600, fill: C.paperInk }, inv, 'Hartmann GmbH, Berlin');
+  [[-30, 220, '€1,800.00'], [20, 170, '€1,250.00'], [70, 240, '€600.00']].forEach(([y, w, a]) => {
+    el('rect', { x: -205, y: y - 11, width: w, height: 12, rx: 6, fill: C.bar }, inv);
+    el('text', { x: 205, y, 'font-size': 22, 'text-anchor': 'end', fill: C.paperInk }, inv, a);
+  });
+  el('line', { x1: -205, x2: 205, y1: 110, y2: 110, stroke: '#dedbd4', 'stroke-width': 2 }, inv);
+  R.hl1 = el('rect', { x: -222, y: 134, width: 444, height: 54, rx: 10, fill: C.acc, opacity: 0 }, inv);
+  R.hl2 = el('rect', { x: -222, y: 224, width: 444, height: 40, rx: 10, fill: C.acc, opacity: 0 }, inv);
+  el('text', { x: -205, y: 170, 'font-size': 24, 'font-weight': 600, fill: C.paperInk }, inv, 'Total');
+  el('text', { x: 205, y: 174, 'font-size': 40, 'font-weight': 760, 'text-anchor': 'end', fill: C.paperInk, 'letter-spacing': -1 }, inv, '€3,650.00');
+  el('text', { x: -205, y: 251, 'font-size': 20, fill: C.grey }, inv, 'Due 1 Jul 2026');
+  el('text', { x: 205, y: 251, 'font-size': 20, 'text-anchor': 'end', fill: C.grey }, inv, 'Net 30');
+  const scan = el('g', { 'clip-path': 'url(#cardClip)' }, inv);
+  R.scan = el('g', { opacity: 0 }, scan);
+  el('rect', { x: -250, y: -120, width: 500, height: 120, fill: 'url(#scanG)' }, R.scan);
+  el('rect', { x: -250, y: -2, width: 500, height: 4, fill: C.acc }, R.scan);
+
+  // Overdue stamp (child of invoice: it rides along with the card)
+  R.stamp = el('g', { opacity: 0 }, inv);
+  el('rect', { x: -170, y: -38, width: 340, height: 76, rx: 12, fill: C.warn, 'fill-opacity': .12, stroke: C.warn, 'stroke-width': 4 }, R.stamp);
+  el('text', { x: 0, y: 11, class: 'mono', 'font-size': 29, 'font-weight': 700, 'text-anchor': 'middle', 'letter-spacing': 2, fill: C.warn }, R.stamp, '89 DAYS OVERDUE');
+
+  /* Legal chips */
+  const chip = (big, sub) => {
+    const g = el('g', { opacity: 0 }, vis);
+    el('rect', { x: -150, y: -50, width: 300, height: 100, rx: 22, fill: '#12211b', stroke: C.acc, 'stroke-width': 2, filter: 'url(#sh2)' }, g);
+    el('text', { x: -118, y: 4, 'font-size': 38, 'font-weight': 760, fill: C.acc, 'letter-spacing': -1 }, g, big);
+    el('text', { x: -118, y: 32, class: 'mono', 'font-size': 16, fill: C.dim }, g, sub);
+    return g;
+  };
+  R.chip1 = chip('+8% a year', 'above the ECB rate');
+  R.chip2 = chip('+€40', 'per late invoice');
+
+  /* Total card */
+  R.tot = el('g', { opacity: 0 }, vis);
+  el('rect', { x: -230, y: -75, width: 460, height: 150, rx: 20, fill: '#10261d', stroke: C.acc, 'stroke-opacity': .55, 'stroke-width': 2, filter: 'url(#sh2)' }, R.tot);
+  el('text', { x: -200, y: -34, class: 'mono', 'font-size': 17, 'letter-spacing': 3, fill: C.acc }, R.tot, 'TOTAL CLAIM');
+  R.count = el('text', { x: -200, y: 28, 'font-size': 58, 'font-weight': 760, fill: '#eafff5', 'letter-spacing': -1.5, 'font-variant-numeric': 'tabular-nums' }, R.tot, '€3,650.00');
+  R.brk = el('text', { x: -200, y: 57, class: 'mono', 'font-size': 15.5, fill: C.dim, opacity: 0 }, R.tot, '€3,650.00 + €92.56 interest + €40.00');
+
+  /* Letter */
+  R.let = el('g', { opacity: 0 }, vis);
+  const lt = R.let;
+  el('rect', { x: -250, y: -320, width: 500, height: 640, rx: 18, fill: C.paper, filter: 'url(#sh)' }, lt);
+  el('text', { x: -205, y: -250, 'font-size': 22, 'font-weight': 720, fill: C.paperInk }, lt, 'Studio Nord');
+  el('rect', { x: -205, y: -233, width: 150, height: 9, rx: 4.5, fill: C.bar }, lt);
+  el('rect', { x: -205, y: -216, width: 115, height: 9, rx: 4.5, fill: C.bar }, lt);
+  el('rect', { x: 55, y: -190, width: 150, height: 9, rx: 4.5, fill: C.bar }, lt);
+  R.chipL = el('g', {}, lt);
+  el('rect', { x: -42, y: -24, width: 84, height: 48, rx: 24, fill: C.acc }, R.chipL);
+  R.chipLT = el('text', { x: 0, y: 8, 'font-size': 22, 'font-weight': 760, 'text-anchor': 'middle', fill: '#062b1d' }, R.chipL, 'DE');
+  R.title = el('text', { x: -205, y: -125, 'font-size': 31, 'font-weight': 760, fill: C.paperInk, 'letter-spacing': -.8 }, lt, LANGS[0].title);
+  R.lines = [410, 380, 405, 300, 395, 350, 220].map((w, i) => ({ w, e: el('rect', { x: -205, y: -92 + i * 32, width: 0, height: 11, rx: 5.5, fill: '#e1ded7' }, lt) }));
+  R.amtRow = el('g', { opacity: 0 }, lt);
+  R.amtL = el('text', { x: -205, y: 186, 'font-size': 20, fill: C.grey }, R.amtRow, LANGS[0].label);
+  R.amt = el('text', { x: 205, y: 188, 'font-size': 36, 'font-weight': 760, 'text-anchor': 'end', fill: C.accDeep, 'letter-spacing': -.8 }, R.amtRow, LANGS[0].amt);
+  R.sig = el('path', { d: 'M-205,262 c14,-34 30,-40 38,-6 c6,26 18,24 30,-4 c10,-24 22,-26 28,-2 c6,20 18,18 32,-6 c10,-16 24,-12 44,-4', fill: 'none', stroke: C.paperInk, 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, lt);
+  R.sigLen = R.sig.getTotalLength();
+  set(R.sig, { 'stroke-dasharray': R.sigLen, 'stroke-dashoffset': R.sigLen });
+
+  /* Speed lines trailing the sent letter */
+  R.speed = el('g', { opacity: 0 }, vis);
+  [[-60, 200], [0, 280], [60, 170]].forEach(([y, w], i) => el('rect', { x: -330 - w - i * 30, y: y - 3, width: w, height: 6, rx: 3, fill: C.acc }, R.speed));
+
+  /* Paid */
+  R.pulse = el('circle', { cx: 0, cy: 10, r: 120, fill: 'none', stroke: C.acc, 'stroke-width': 4, opacity: 0 }, vis);
+  R.paid = el('g', { opacity: 0 }, vis);
+  el('circle', { cx: 0, cy: 0, r: 120, fill: C.acc }, R.paid);
+  R.check = el('path', { d: 'M-52,4 L-14,42 L58,-40', fill: 'none', stroke: '#062b1d', 'stroke-width': 20, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, R.paid);
+  R.checkLen = R.check.getTotalLength();
+  set(R.check, { 'stroke-dasharray': R.checkLen, 'stroke-dashoffset': R.checkLen });
+  R.paidTx = el('g', { opacity: 0 }, vis);
+  el('text', { x: 0, y: 225, 'font-size': 76, 'font-weight': 760, 'text-anchor': 'middle', fill: C.ink, 'letter-spacing': -2 }, R.paidTx, 'Paid.');
+  el('text', { x: 0, y: 272, class: 'mono', 'font-size': 22, 'text-anchor': 'middle', fill: C.dim }, R.paidTx, '€3,782.56 received');
+
+  /* End card */
+  const E = V ? { y: H / 2 - 60, fs: 190, tfs: 42 } : { y: H / 2 - 20, fs: 200, tfs: 46 };
+  R.end = el('g', { opacity: 0 });
+  const word = 'Dunwell', track = -E.fs * .045;
+  const ch = [...word].map(c => { const e = el('text', { 'font-size': E.fs, 'font-weight': 760, fill: C.ink }, R.end, c); return { e, w: e.getComputedTextLength() }; });
+  const total = ch.reduce((s, c) => s + c.w + track, -track);
+  let x = W / 2 - total / 2;
+  R.endChars = ch.map(c => { const o = { e: c.e, x }; x += c.w + track; return o; });
+  R.endY = E.y;
+  R.under = el('rect', { x: W / 2 - total / 2, y: E.y + 34, width: 0, height: 12, rx: 6, fill: C.acc }, R.end);
+  R.underW = total;
+  R.tag = el('text', { x: W / 2, y: E.y + 130, 'font-size': E.tfs, 'font-weight': 520, 'text-anchor': 'middle', fill: C.ink, opacity: 0 }, R.end, 'Stop chasing. Start stating the rules.');
+  R.pill = el('g', { opacity: 0 }, R.end);
+  const pt = el('text', { x: W / 2 + 12, y: E.y + 238, class: 'mono', 'font-size': V ? 21 : 22, 'text-anchor': 'middle', fill: C.dim }, R.pill, 'EU + UK late-payment letters  ·  free demo');
+  const pw = pt.getComputedTextLength() + 90;
+  R.pill.insertBefore(el('rect', { x: W / 2 - pw / 2, y: E.y + 196, width: pw, height: 62, rx: 31, fill: '#141816', stroke: '#2a302d', 'stroke-width': 2 }, R.pill), pt);
+  el('circle', { cx: W / 2 - pw / 2 + 32, cy: E.y + 227, r: 6, fill: C.acc }, R.pill);
+  R.pillY = E.y;
+
+  R.bar = el('rect', { x: 0, y: H - 5, height: 5, width: 0, fill: C.acc, opacity: .85 });
+}
+
+function renderAt(t) {
+  t = clamp(t, 0, DUR);
+
+  set(R.glow, { r: 760 + 40 * Math.sin(t * .9), opacity: 1 - .6 * prog(t, 16.2, 17) });
+  const bo = 1 - prog(t, 16.2, 16.5);
+  set(R.brand, { opacity: bo * eOut(prog(t, 0, .4)) });
+
+  /* Headlines: words rise in with stagger, whole block lifts out */
+  for (const h of R.heads) {
+    const { t0, t1 } = h.sc;
+    const live = t >= t0 && t < t1;
+    const ex = eIn(prog(t, t1 - .32, t1));
+    set(h.g, { opacity: live ? 1 - ex : 0, transform: `translate(0 ${-28 * ex})` });
+    if (!live) continue;
+    set(h.k, { opacity: eOut(prog(t, t0 + .05, t0 + .4)) });
+    h.words.forEach((w, i) => {
+      const a = t0 + .14 + i * .06, p = eOut(prog(t, a, a + .5));
+      set(w.e, { transform: `translate(${w.x} ${w.y + 46 * (1 - p)})`, opacity: p });
+    });
+  }
+
+  /* S1: invoice falls onto the table, stamp hits it */
+  {
+    const d = drop(t, .3, .82, V ? 300 : 560, .1);
+    const push = bump(t, 1.92, 9, 22, 9); // stamp impact pushes the card down a touch
+    const ex = eIn(prog(t, 10.0, 10.42));
+    const r = -6 * (1 - prog(t, .3, .82)) + bump(t, .82, 1.6, 14, 6) - 5 * ex;
+    set(R.inv, {
+      opacity: prog(t, .3, .45) * (1 - ex),
+      transform: tf(-170 * ex, d.y + push, { r, sx: d.sx, sy: d.sy, s: 1 - .06 * ex, b: 320 })
+    });
+    const sp = prog(t, 1.55, 1.92);
+    const s = t < 1.92 ? lerp(2.3, 1, eIn(sp)) : 1 - ring(t, 1.92, .09, 30, 10);
+    set(R.stamp, { opacity: prog(t, 1.55, 1.7), transform: `translate(20 40) rotate(-8) scale(${s})` });
+  }
+
+  /* S2: the two statutory add-ons drop in, second one lags the first */
+  [[R.chip1, 3.95, 4.3, [245, -218], 5], [R.chip2, 4.28, 4.63, [262, -96], -4]].forEach(([g, a, b, [x, y], rot], i) => {
+    const d = drop(t, a, b, 480, .14);
+    const ex = eIn(prog(t, 9.8 + i * .06, 10.15 + i * .06));
+    const r = rot * prog(t, a, b) + bump(t, b, 3, 16, 7);
+    set(g, { opacity: prog(t, a, a + .12) * (1 - ex), transform: tf(x - 150 * ex, y + d.y, { r, sx: d.sx, sy: d.sy, b: 50 }) });
+  });
+
+  /* S3: scan, then the claim is counted up and locks in */
+  {
+    const sp = prog(t, 6.9, 7.8);
+    set(R.scan, { opacity: sp > 0 && sp < 1 ? 1 : 0, transform: `translate(0 ${lerp(-320, 340, eInOut(sp))})` });
+    const scanY = lerp(-320, 340, eInOut(sp));
+    const fade = 1 - prog(t, 9.4, 9.9);
+    set(R.hl1, { opacity: .2 * prog(scanY, 130, 190) * fade });
+    set(R.hl2, { opacity: .2 * prog(scanY, 220, 265) * fade });
+
+    const e = prog(t, 7.55, 8.05);
+    const lock = ring(t, 9.0, .045, 24, 8);
+    const ex = eIn(prog(t, 9.9, 10.25));
+    set(R.tot, {
+      opacity: prog(t, 7.55, 7.7) * (1 - ex),
+      transform: tf(-160 * ex, 395 + 200 * (1 - eOutBack(e, 1.2)), { s: 1 + lock, b: 75 })
+    });
+    const v = 3650 + 132.56 * eOut(prog(t, 7.95, 9.0));
+    R.count.textContent = money(Math.round(v * 100) / 100);
+    set(R.brk, { opacity: eOut(prog(t, 9.0, 9.3)) });
+  }
+
+  /* S4: letter arrives on an arc, writes itself, then cycles languages */
+  {
+    const e = eOut(prog(t, 10.2, 10.85));
+    let [x, y] = bez(e, [320, 760], [360, 60], [0, 0]);
+    let r = 9 * (1 - e) + bump(t, 10.85, 1.4, 12, 6), sx = 1, sy = 1, s = 1, op = prog(t, 10.2, 10.38);
+
+    // S5: anticipation dip, then launch up-right
+    const a = eOut(prog(t, 13.7, 14.0));
+    y += 28 * a; r -= 2.5 * a; sy *= 1 - .035 * a; sx *= 1 + .02 * a;
+    const lp = prog(t, 14.0, 14.5), l = eIn(lp);
+    if (lp > 0) {
+      [x, y] = bez(l, [0, 28], [60, -380], [900, -820]);
+      r = -2.5 + 28 * l; s = 1 - .62 * l; op *= 1 - prog(t, 14.32, 14.5);
+      sx = 1; sy = 1;
+    }
+    set(R.let, { opacity: op, transform: tf(x, y, { r, sx, sy, s, b: 320 }) });
+
+    // speed lines ride behind the letter, pointing along its velocity
+    const dv = bezD(Math.max(l, .05), [0, 28], [60, -380], [900, -820]);
+    const ang = Math.atan2(dv[1], dv[0]) * 180 / Math.PI;
+    set(R.speed, { opacity: .75 * Math.sin(Math.PI * prog(t, 14.2, 14.5)), transform: `translate(${x} ${y}) rotate(${ang}) scale(${s})` });
+
+    R.lines.forEach((ln, i) => { const a0 = 10.7 + i * .11; set(ln.e, { width: ln.w * eOut(prog(t, a0, a0 + .32)) }); });
+    const ap = eOut(prog(t, 11.45, 11.75));
+    set(R.amtRow, { opacity: ap, transform: `translate(0 ${14 * (1 - ap)})` });
+    set(R.sig, { 'stroke-dashoffset': R.sigLen * (1 - eInOut(prog(t, 11.7, 12.2))) });
+
+    let li = 0; LANGS.forEach((g, i) => { if (t >= g.at) li = i; });
+    const lang = LANGS[li];
+    if (R.chipLT.textContent !== lang.code) {
+      R.chipLT.textContent = lang.code; R.title.textContent = lang.title;
+      R.amtL.textContent = lang.label; R.amt.textContent = lang.amt;
+    }
+    // text blinks through a short dip around each switch so the swap never pops
+    let dip = 1;
+    for (const g of LANGS.slice(1)) dip = Math.min(dip, clamp(Math.abs(t - g.at) / .07));
+    set(R.title, { opacity: dip }); set(R.amtRow, { opacity: ap * dip });
+    const pop = li > 0 ? ring(t, lang.at, .22, 20, 10) : 0;
+    set(R.chipL, { transform: `translate(185 -258) scale(${1 + pop})` });
+  }
+
+  /* S5: paid lands after the letter has left, check draws after the landing */
+  {
+    const d = drop(t, 14.62, 14.98, 620, .16);
+    const ex = eIn(prog(t, 16.2, 16.6));
+    set(R.paid, { opacity: prog(t, 14.62, 14.72) * (1 - ex), transform: tf(0, 10 + d.y - 40 * ex, { sx: d.sx, sy: d.sy, s: 1 - .25 * ex, b: 120 }) });
+    set(R.check, { 'stroke-dashoffset': R.checkLen * (1 - eOut(prog(t, 15.08, 15.45))) });
+    const pp = prog(t, 14.98, 15.8);
+    set(R.pulse, { r: lerp(120, 290, eOut(pp)), opacity: pp > 0 && pp < 1 ? .55 * (1 - pp) : 0 });
+    const tp = eOut(prog(t, 15.22, 15.65));
+    set(R.paidTx, { opacity: tp * (1 - ex), transform: `translate(0 ${30 * (1 - tp) - 40 * ex})` });
+  }
+
+  /* S6: end card */
+  {
+    set(R.end, { opacity: t >= 16.5 ? 1 : 0 });
+    R.endChars.forEach((c, i) => {
+      const a = 16.62 + i * .05, p = eOut(prog(t, a, a + .55));
+      set(c.e, { opacity: p, transform: `translate(${c.x} ${R.endY + 70 * (1 - p)})` });
+    });
+    set(R.under, { width: R.underW * eInOut(prog(t, 17.25, 17.8)) });
+    const tg = eOut(prog(t, 17.55, 18.0));
+    set(R.tag, { opacity: tg, transform: `translate(0 ${24 * (1 - tg)})` });
+    const pl = eOut(prog(t, 17.95, 18.4));
+    set(R.pill, { opacity: pl, transform: `translate(0 ${20 * (1 - pl)})` });
+  }
+
+  set(R.bar, { width: W * t / DUR });
+}
+
+(async () => {
+  await Promise.all([
+    document.fonts.load('700 80px Geist'), document.fonts.load('400 20px Geist'),
+    document.fonts.load('500 20px GeistMono')]);
+  await document.fonts.ready;
+  build();
+  window.renderAt = renderAt;
+  renderAt(Number(Q.get('t') || 0));
+  window.ready = true;
+  if (Q.get('play')) {
+    const start = performance.now();
+    const loop = now => { renderAt(((now - start) / 1000) % DUR); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  }
+})();
+</script>
+</body>
+</html>
