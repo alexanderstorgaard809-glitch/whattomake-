@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Late Payment Interest Calculator (EU and UK) | Dunwell</title>
+<meta name="description" content="Free calculator for statutory late payment interest and fixed compensation on unpaid invoices between businesses in the EU (Directive 2011/7/EU) and the UK (Late Payment Act 1998).">
+<link rel="canonical" href="/calculator">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
+<style>
+  .calc-page { padding: 44px 0 40px; }
+  .calc-page h1 { font-size: clamp(32px, 4.2vw, 48px); letter-spacing: -0.035em; line-height: 1.06; margin: 0 0 14px; font-weight: 650; max-width: 18ch; }
+  .calc-page .lead { color: var(--muted); font-size: 18px; max-width: 56ch; margin: 0 0 32px; }
+  .calc-grid { display: grid; grid-template-columns: 1fr 400px; gap: 20px; align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-box); padding: 24px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  label.f { display: block; font-size: 14px; font-weight: 600; margin: 16px 0 6px; }
+  .help { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; }
+  input.t, select.t { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-ctl);
+    background: var(--bg); color: var(--ink); font: 15px var(--font); }
+  input.t:focus, select.t:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .check { display: flex; gap: 8px; align-items: center; margin-top: 16px; font-size: 14.5px; }
+  .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .inv { display: grid; grid-template-columns: 1.2fr 1fr 34px; gap: 10px; align-items: end; margin-top: 10px; }
+  .inv label { font-size: 12.5px; color: var(--muted); font-weight: 600; display: block; margin-bottom: 5px; }
+  .icon-btn { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 8px 4px; border-radius: 6px; display: inline-flex; }
+  .icon-btn:hover { color: var(--danger); background: var(--danger-soft); }
+  .link-btn { border: 0; background: none; color: var(--accent); font: 600 14.5px var(--font); cursor: pointer; padding: 0; margin-top: 14px;
+              text-decoration: underline; text-underline-offset: 3px; }
+  .result { position: sticky; top: 84px; }
+  .result h2 { font-size: 16px; margin: 0; }
+  .big { font-family: var(--mono); font-size: 40px; letter-spacing: -0.04em; line-height: 1.1; margin: 4px 0 16px; }
+  .breakdown { display: grid; gap: 7px; border-top: 1px solid var(--line); padding-top: 12px; font-size: 14.5px; }
+  .breakdown div { display: flex; justify-content: space-between; gap: 12px; }
+  .basis { font-size: 13.5px; color: var(--muted); margin: 14px 0 0; }
+  .opts { margin-top: 16px; display: grid; gap: 7px; font-size: 14.5px; }
+  .opts div { display: flex; gap: 9px; } .opts .yes .i { color: var(--accent); } .opts .no { color: var(--muted); }
+  .opts .i { margin-top: 3px; }
+  .note { background: var(--warn-soft); color: var(--warn); border-radius: var(--r-ctl); padding: 10px 12px; font-size: 14px; margin-top: 10px; }
+  .cta { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .cta p { margin: 0 0 12px; font-size: 15px; }
+  .cta .btn { width: 100%; justify-content: center; }
+  .explain { max-width: 760px; }
+  .explain h2 { font-size: 26px; letter-spacing: -0.02em; margin: 0 0 10px; }
+  .explain h3 { font-size: 18px; margin: 26px 0 6px; }
+  .explain p { color: var(--muted); margin: 0 0 12px; }
+  .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+  .rules .panel h3 { margin: 0 0 8px; }
+  .rules ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 15px; display: grid; gap: 4px; }
+  @media (max-width: 900px) { .calc-grid, .rules { grid-template-columns: 1fr; } .result { position: static; } }
+  @media (max-width: 520px) { .row2 { grid-template-columns: 1fr; } .inv { grid-template-columns: 1fr 1fr 34px; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="/">Dunwell</a>
+  <nav class="links"><a class="hide-sm" href="/#how">How it works</a><a class="btn sm" href="/app">Try the demo</a></nav>
+</div></header>
+
+<main class="wrap calc-page">
+  <h1>Late payment interest calculator</h1>
+  <p class="lead">Work out the statutory interest and fixed compensation a business owes you for paying late, under EU and UK law. Free, instant, no sign-up.</p>
+
+  <div class="calc-grid">
+    <form class="panel" id="form" onsubmit="return false">
+      <div class="row2">
+        <div><label class="f" for="cCountry">Your country</label><select class="t" id="cCountry"></select></div>
+        <div><label class="f" for="dCountry">Your client's country</label><select class="t" id="dCountry"></select></div>
+      </div>
+      <label class="check"><input type="checkbox" id="b2b" checked> Both you and your client are businesses</label>
+      <p class="help">Statutory interest and fixed compensation only apply between businesses.</p>
+
+      <div id="invoices"></div>
+      <button class="link-btn" type="button" id="addInv">+ Add another invoice</button>
+      <p class="help">Fixed compensation is added once per late invoice. If no due date was agreed, the law usually assumes 30 days after the invoice.</p>
+    </form>
+
+    <aside class="panel result" aria-live="polite">
+      <h2>You can claim</h2>
+      <div class="big" id="total">-</div>
+      <div class="breakdown" id="breakdown"></div>
+      <p class="basis" id="basis"></p>
+      <div class="opts" id="opts"></div>
+      <div id="warn"></div>
+      <div class="cta">
+        <p>Turn this into a formal demand letter in your client's language, ready to send.</p>
+        <a class="btn" href="/app">Write the letter {{icon:arrow-right}}</a>
+      </div>
+    </aside>
+  </div>
+
+  <section class="block explain" style="padding-bottom:20px">
+    <h2>How the calculation works</h2>
+    <p>When a business pays you late, the law adds two things on top of the invoice. Which rules apply usually depends on where you are based, unless your contract chose another law.</p>
+    <div class="rules">
+      <div class="panel"><h3>EU (Directive 2011/7/EU)</h3><ul>
+        <li>Interest: ECB reference rate + at least 8 percentage points a year</li>
+        <li>Fixed compensation: €40 per late invoice</li>
+        <li>Default payment term: 30 days if nothing was agreed</li>
+        <li>Some countries add more, for example France (+10)</li></ul></div>
+      <div class="panel"><h3>UK (Late Payment Act 1998)</h3><ul>
+        <li>Interest: Bank of England base rate + 8 percentage points a year</li>
+        <li>Fixed compensation: £40 under £1,000, £70 up to £9,999.99, £100 above</li>
+        <li>The base rate is fixed per invoice by the half-year it fell due</li>
+        <li>You can also claim reasonable extra recovery costs</li></ul></div>
+    </div>
+    <h3>Is this legal advice?</h3>
+    <p>No. The calculator uses the standard statutory rules and simple daily interest. Your contract, national variations or a court may lead to a different amount. Check before you claim.</p>
+  </section>
+</main>
+
+<footer class="site"><div class="wrap">
+  <span>Dunwell by {{OPERATOR_NAME}}. Not a law firm, no legal advice.</span>
+  <nav><a href="/">Home</a><a href="/calculator">Calculator</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav>
+</div></footer>
+
+<template id="tplX">{{icon:x}}</template>
+<template id="tplYes">{{icon:check-circle}}</template>
+<template id="tplNo">{{icon:x}}</template>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const tpl = (id) => document.getElementById(id).innerHTML;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (n, cur) => {
+  const v = Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return cur === "GBP" ? "£" + v : cur === "EUR" ? "€" + v : cur && cur !== "MIXED" ? `${cur} ${v}` : v;
+};
+const iso = (d) => d.toISOString().slice(0, 10);
+const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
+let invoices = [{ amount: 2500, due_date: daysAgo(60) }];
+
+function currency() { return $("#cCountry").value === "GB" ? "GBP" : "EUR"; }
+
+function renderInvoices() {
+  $("#invoices").innerHTML = invoices.map((inv, i) => `<div class="inv">
+    <div><label for="amt${i}">Amount (${currency()})</label>
+      <input class="t num" id="amt${i}" type="number" min="0" step="0.01" data-i="${i}" data-k="amount" value="${esc(inv.amount)}"></div>
+    <div><label for="due${i}">Due date</label>
+      <input class="t" id="due${i}" type="date" data-i="${i}" data-k="due_date" value="${esc(inv.due_date)}"></div>
+    <button class="icon-btn" type="button" data-del="${i}" aria-label="Remove invoice" ${invoices.length < 2 ? "hidden" : ""}>${tpl("tplX")}</button>
+  </div>`).join("");
+}
+$("#invoices").addEventListener("input", (e) => {
+  const el = e.target; if (!el.dataset.k) return;
+  invoices[el.dataset.i][el.dataset.k] = el.dataset.k === "amount" ? parseFloat(el.value) || 0 : el.value;
+  update();
+});
+$("#invoices").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-del]"); if (!b) return;
+  invoices.splice(+b.dataset.del, 1); renderInvoices(); update();
+});
+$("#addInv").onclick = () => { if (invoices.length < 20) { invoices.push({ amount: 1000, due_date: daysAgo(30) }); renderInvoices(); update(); } };
+
+let timer;
+function update() {
+  clearTimeout(timer);
+  timer = setTimeout(async () => {
+    const b2b = $("#b2b").checked, cur = currency();
+    const claim = {
+      creditor: { country: $("#cCountry").value, is_business: b2b },
+      debtor: { country: $("#dCountry").value, is_business: b2b, entity_type: b2b ? "company" : "individual" },
+      invoices: invoices.map((inv, i) => ({ number: `#${i + 1}`, issue_date: "", due_date: inv.due_date, amount: inv.amount, currency: cur })),
+    };
+    try {
+      const res = await fetch("/api/recalc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not calculate");
+      render(data.calc);
+    } catch (e) { $("#warn").innerHTML = `<div class="note">${esc(e.message)}</div>`; }
+  }, 120);
+}
+
+function render(c) {
+  const same = c.currency === c.compensation_currency;
+  $("#total").textContent = same ? money(c.principal + c.interest + c.compensation, c.currency) : money(c.principal + c.interest, c.currency);
+  $("#breakdown").innerHTML = `
+    <div><span>Unpaid invoices</span><span class="num">${money(c.principal, c.currency)}</span></div>
+    <div><span>Statutory interest to date</span><span class="num">${money(c.interest, c.currency)}</span></div>
+    <div><span>Fixed compensation</span><span class="num">${money(c.compensation, c.compensation_currency)}</span></div>
+    <div class="muted"><span>Interest per day from now</span><span class="num">${money(c.daily_interest, c.currency)}</span></div>`;
+  const rates = c.rates_used || [];
+  const base = c.regime === "UK" ? "Bank of England base rate + 8 points" : "ECB reference rate + 8 points";
+  $("#basis").textContent = !c.law ? "" : rates.length
+    ? `Based on the ${c.law}. Interest at ${rates.map((r) => r + "%").join(" and ")} a year (${base}), simple daily interest.`
+    : `Based on the ${c.law}. Nothing is overdue yet.`;
+  $("#opts").innerHTML = (c.procedures.options || []).map((o) => `<div class="${o.available ? "yes" : "no"}">${tpl(o.available ? "tplYes" : "tplNo")}<span>${esc(o.name)}</span></div>`).join("");
+  $("#warn").innerHTML = c.warnings.filter((w) => !/assumed/.test(w)).map((w) => `<div class="note">${esc(w)}</div>`).join("");
+}
+
+fetch("/api/meta").then((r) => r.json()).then((m) => {
+  const opts = Object.entries(m.countries).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+  $("#cCountry").innerHTML = opts; $("#dCountry").innerHTML = opts;
+  $("#cCountry").value = "ES"; $("#dCountry").value = "DE";
+  ["cCountry", "dCountry", "b2b"].forEach((id) => $("#" + id).addEventListener("change", () => { renderInvoices(); update(); }));
+  renderInvoices(); update();
+});
+</script>
+</body>
+</html>

@@ -31,7 +31,10 @@ EXAMPLES = ROOT / "examples"
 MAX_BODY = 12 * 1024 * 1024  # ca. 8 MB filer efter base64
 LAST_UPDATED = "28 September 2026"
 
-PAGES = {"/": "landing.html", "/app": "app.html", "/privacy": "privacy.html", "/terms": "terms.html"}
+PAGES = {"/": "landing.html", "/app": "app.html", "/calculator": "calculator.html",
+         "/privacy": "privacy.html", "/terms": "terms.html"}
+SITEMAP_PATHS = ["/", "/calculator", "/app", "/privacy", "/terms"]
+MAX_INVOICES = 50
 ASSETS = {"/site.css": ("site.css", "text/css; charset=utf-8")}
 FONTS = STATIC / "fonts"
 ICONS = STATIC / "icons"
@@ -138,7 +141,9 @@ def letter(payload):
 
 
 def recalc(payload):
-    return {"calc": _calc(payload["claim"], payload, config())}
+    claim = payload["claim"]
+    claim["invoices"] = (claim.get("invoices") or [])[:MAX_INVOICES]  # gratis endpoint: begræns arbejdet
+    return {"calc": _calc(claim, payload, config())}
 
 
 def meta(_payload=None):
@@ -180,6 +185,13 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path == "/favicon.ico":
             return self._send(204, b"", "image/x-icon")  # intet ikon, men ingen 404-støj i loggen
+        if path == "/robots.txt":
+            body = f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {self._origin()}/sitemap.xml\n"
+            return self._send(200, body.encode(), "text/plain; charset=utf-8")
+        if path == "/sitemap.xml":
+            urls = "".join(f"<url><loc>{self._origin()}{p}</loc></url>" for p in SITEMAP_PATHS)
+            body = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>'
+            return self._send(200, body.encode(), "application/xml; charset=utf-8")
         if path == "/healthz":
             return self._send(200, b"ok", "text/plain")
         if path == "/api/meta":
@@ -223,6 +235,11 @@ class Handler(BaseHTTPRequestHandler):
             traceback.print_exc()  # kun serverens log, ingen brugerdata
             self._json(500, {"error": "Something went wrong." if os.environ.get("PUBLIC")
                              else f"{type(e).__name__}: {e}"})
+
+    def _origin(self):
+        host = re.sub(r"[^A-Za-z0-9.:-]", "", self.headers.get("Host") or "localhost")
+        scheme = "http" if host.startswith(("localhost", "127.")) else "https"
+        return f"{scheme}://{host}"
 
     def _client_ip(self):
         fwd = self.headers.get("X-Forwarded-For")

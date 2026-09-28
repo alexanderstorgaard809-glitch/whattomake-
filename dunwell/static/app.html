@@ -81,6 +81,16 @@
                 padding: 36px 40px; white-space: pre-wrap; font-size: 15px; line-height: 1.65; min-height: 420px; }
   .letter-actions { display: grid; gap: 10px; position: sticky; top: 84px; }
   .letter-actions .btn { justify-content: center; }
+  #printArea { display: none; }
+  /* A4 print layout used for "Save as PDF": only the letter, no site chrome. */
+  @page { size: A4; margin: 22mm 20mm 20mm; }
+  @media print {
+    body { background: #fff; }
+    body > *:not(#printArea) { display: none !important; }
+    #printArea { display: block; color: #16181a; font: 10.5pt/1.55 var(--font); }
+    #printArea h1 { font-size: 12.5pt; font-weight: 650; margin: 0 0 14pt; letter-spacing: -0.01em; }
+    #printArea .body { white-space: pre-wrap; }
+  }
   .tabs { margin-bottom: 14px; }
 
   /* loading skeletons */
@@ -234,6 +244,7 @@
         <input class="t" id="note" placeholder="For example: mention project ACME redesign">
         <button class="btn ghost" id="rewrite" type="button">{{icon:arrow-counter-clockwise}} Rewrite letter</button>
         <button class="btn" id="copyBtn" type="button">{{icon:copy}} Copy letter</button>
+        <button class="btn ghost" id="pdfBtn" type="button">{{icon:file-text}} Save as PDF</button>
         <button class="btn ghost" id="dlBtn" type="button">{{icon:download-simple}} Download .txt</button>
         <p class="help" id="deadlineInfo"></p>
         <button class="link-btn" id="restart" type="button" style="justify-self:start">Start a new claim</button>
@@ -241,10 +252,11 @@
     </div>
   </section>
 </main>
+<div id="printArea" aria-hidden="true"></div>
 
 <footer class="site"><div class="wrap">
   <span>Dunwell is a self-help tool, not legal advice. Check every detail before sending.</span>
-  <nav><a href="/">Home</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav>
+  <nav><a href="/">Home</a><a href="/calculator">Calculator</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav>
 </div></footer>
 
 <template id="tplRemove">{{icon:x}}</template>
@@ -445,7 +457,7 @@ function renderCalc(calc) {
 // ---------- step 3: letter ----------
 async function writeLetter() {
   $("#letterLoading").hidden = false; $("#letterLocal").hidden = true; $("#letterEn").hidden = true;
-  showErr($("#letterErr"), ""); $("#copyBtn").disabled = $("#dlBtn").disabled = $("#rewrite").disabled = true;
+  showErr($("#letterErr"), ""); $("#copyBtn").disabled = $("#dlBtn").disabled = $("#pdfBtn").disabled = $("#rewrite").disabled = true;
   try {
     const r = await api("/api/letter", { claim: state.claim, rate_override: rateOverride(), language: $("#lang").value, note: $("#note").value });
     letter = r; renderCalc(r.calc);
@@ -457,7 +469,7 @@ async function writeLetter() {
     $("#deadlineInfo").textContent = `The letter asks for payment by ${due}. Send it by email and a trackable method, and keep a copy as evidence.`;
     selectTab("local");
   } catch (e) { showErr($("#letterErr"), e.message); }
-  finally { $("#letterLoading").hidden = true; $("#copyBtn").disabled = $("#dlBtn").disabled = $("#rewrite").disabled = false; }
+  finally { $("#letterLoading").hidden = true; $("#copyBtn").disabled = $("#dlBtn").disabled = $("#pdfBtn").disabled = $("#rewrite").disabled = false; }
 }
 function selectTab(which) {
   $("#tabLocal").setAttribute("aria-selected", which === "local"); $("#tabEn").setAttribute("aria-selected", which === "en");
@@ -472,6 +484,17 @@ $("#copyBtn").onclick = async () => {
   try { await navigator.clipboard.writeText(visibleLetter()); $("#copyBtn").lastChild.textContent = " Copied"; }
   catch { $("#copyBtn").lastChild.textContent = " Select the text to copy"; }
   setTimeout(() => $("#copyBtn").lastChild.textContent = " Copy letter", 1800);
+};
+// "Save as PDF": the browser's own print dialog with an A4 letter layout (nothing is uploaded anywhere).
+$("#pdfBtn").onclick = () => {
+  const text = visibleLetter();
+  const [subject, ...rest] = text.split("\n\n");
+  $("#printArea").innerHTML = `<h1>${esc(subject)}</h1><div class="body">${esc(rest.join("\n\n"))}</div>`;
+  const oldTitle = document.title;
+  const inv = (state?.claim?.invoices?.[0]?.number || "").replace(/[^A-Za-z0-9-]/g, "");
+  document.title = `Demand letter${inv ? " " + inv : ""}`;  // becomes the suggested PDF file name
+  window.addEventListener("afterprint", () => { document.title = oldTitle; }, { once: true });
+  window.print();
 };
 $("#dlBtn").onclick = () => {
   const a = document.createElement("a");
