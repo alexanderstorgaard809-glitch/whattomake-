@@ -1,4 +1,2 @@
 .env
 __pycache__/
-tender_radar/data/
-tender_radar/output/
