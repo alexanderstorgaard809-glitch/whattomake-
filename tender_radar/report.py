@@ -3,6 +3,8 @@
 import html
 from datetime import date
 
+from ted import format_value
+
 COUNTRIES = {
     "DNK": "Danmark", "SWE": "Sverige", "NOR": "Norge", "FIN": "Finland", "DEU": "Tyskland",
     "NLD": "Holland", "BEL": "Belgien", "FRA": "Frankrig", "IRL": "Irland", "POL": "Polen",
@@ -31,9 +33,7 @@ TEXT = {
 
 
 def _value(t, tx):
-    if not t.get("value"):
-        return tx["unknown"]
-    return f"{t['value']:,.0f} {t['currency']}".replace(",", ".")
+    return format_value(t, tx["unknown"])
 
 
 def build(profile, results, total, days):

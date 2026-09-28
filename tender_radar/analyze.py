@@ -5,6 +5,8 @@ Trin 1 (summarize): Hvert udbud oversættes og opsummeres på engelsk ÉN gang o
 Trin 2 (match):     For hver kundeprofil scores de opsummerede udbud 0-100 med en kort begrundelse.
 """
 
+from ted import format_value
+
 SUMMARY_BATCH = 10
 MATCH_BATCH = 40
 
@@ -83,7 +85,7 @@ def _chunks(items, size):
 
 def _tender_text(t):
     desc = t["description"][:2500]
-    value = f"{t['value']:,.0f} {t['currency']}" if t.get("value") else "unknown"
+    value = format_value(t)
     return (f"ID: {t['id']}\nTitle: {t['title']}\nBuyer: {t['buyer']} ({t['country']})\n"
             f"CPV: {', '.join(t['cpv'][:6])}\nEstimated value: {value}\nDescription: {desc}")
 

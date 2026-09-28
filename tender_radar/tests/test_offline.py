@@ -53,6 +53,15 @@ class OfflineTests(unittest.TestCase):
         self.assertEqual((t["value"], t["currency"]), (150000.0, "EUR"))
         self.assertEqual(t["published"], "2026-09-20")
 
+    def test_values_as_text(self):
+        t = ted.normalize(dict(RAW, **{"estimated-value-proc": "250000", "estimated-value-cur-proc": "EUR"}))
+        self.assertEqual(t["value"], 250000.0)
+        t2 = ted.normalize(dict(RAW, **{"estimated-value-lot": ["100000", "50000.5"]}))
+        self.assertEqual(t2["value"], 150000.5)
+        # gamle data i tenders.json kan have tekst-værdier
+        self.assertEqual(ted.format_value({"value": "1200000", "currency": "DKK"}), "1.200.000 DKK")
+        self.assertEqual(ted.format_value({"value": "n/a"}), "unknown")
+
     def test_query(self):
         q = ted.build_query(["72000000", "48000000"], 30, ["cn-standard"])
         self.assertIn("classification-cpv IN (72000000 48000000)", q)

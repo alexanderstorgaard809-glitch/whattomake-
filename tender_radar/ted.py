@@ -155,11 +155,29 @@ def pick_link(links, pub_no):
     return f"https://ted.europa.eu/en/notice/-/detail/{pub_no}"
 
 
+def to_number(value):
+    """TED sender beløb både som tal og som tekst, fx 150000.0 eller "150000"."""
+    value = pick_first(value)
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).replace(" ", "").replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def format_value(t, unknown="unknown"):
+    value = to_number(t.get("value"))
+    if not value:
+        return unknown
+    return f"{value:,.0f} {t.get('currency', '')}".replace(",", ".").strip()
+
+
 def estimated_value(n):
-    value, cur = n.get("estimated-value-proc"), n.get("estimated-value-cur-proc")
+    value, cur = to_number(n.get("estimated-value-proc")), n.get("estimated-value-cur-proc")
     if value is None:
-        lots = n.get("estimated-value-lot") or []
-        lots = [v for v in lots if isinstance(v, (int, float))]
+        lots = [to_number(v) for v in (n.get("estimated-value-lot") or [])]
+        lots = [v for v in lots if v is not None]
         if lots:
             value = sum(lots)
             cur = pick_first(n.get("estimated-value-cur-lot"))
