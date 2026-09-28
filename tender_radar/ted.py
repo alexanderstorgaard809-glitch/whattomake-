@@ -36,7 +36,9 @@ PREFERRED_LANGS = ["eng", "dan", "deu", "fra", "nld", "swe", "nor"]
 
 
 class TedError(Exception):
-    pass
+    def __init__(self, message, details=None):
+        super().__init__(message)
+        self.details = details or {}  # TED's fejl-JSON, fx {"error": {"type": ..., "fieldValue": ...}}
 
 
 def build_query(cpv_codes, days_back, notice_types=None):
@@ -62,7 +64,11 @@ def _post(body):
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         detail = e.read().decode("utf-8", errors="replace")[:1000]
-        raise TedError(f"TED svarede {e.code}: {detail}") from e
+        try:
+            details = json.loads(detail)
+        except ValueError:
+            details = {}
+        raise TedError(f"TED svarede {e.code}: {detail}", details) from e
     except urllib.error.URLError as e:
         raise TedError(f"Kunne ikke forbinde til TED ({e.reason}). Tjek din internetforbindelse.") from e
 
@@ -90,14 +96,25 @@ def search(query, scope="ACTIVE", max_notices=5000, log=print):
 
 
 def fetch(cpv_codes, days_back, notice_types, scope="ACTIVE", log=print):
-    """Henter udbud. Hvis TED afviser filteret på notice-type, prøves igen uden og der filtreres lokalt."""
-    try:
-        raw = search(build_query(cpv_codes, days_back, notice_types), scope, log=log)
-    except TedError as e:
-        if not notice_types or "notice-type" not in str(e):
-            raise
-        log(f"  TED afviste notice-type-filteret, prøver uden: {e}")
-        raw = search(build_query(cpv_codes, days_back), scope, log=log)
+    """Henter udbud. Hvis TED afviser en CPV-kode eller udbudstype, fjernes den, og der prøves igen."""
+    cpv_codes, notice_types = list(cpv_codes), list(notice_types or [])
+    for _ in range(len(cpv_codes) + len(notice_types) + 1):
+        try:
+            raw = search(build_query(cpv_codes, days_back, notice_types), scope, log=log)
+            break
+        except TedError as e:
+            err = (e.details or {}).get("error") or {}
+            field, value = err.get("fieldName"), err.get("fieldValue")
+            if err.get("type") != "QUERY_UNSUPPORTED_FIELD_VALUE":
+                raise
+            if field == "classification-cpv" and value in cpv_codes:
+                cpv_codes.remove(value)
+                log(f"  TED kender ikke CPV-koden {value}, springer den over (fjern den gerne fra config.json)")
+            elif field == "notice-type" and value in notice_types:
+                notice_types.remove(value)
+                log(f"  TED kender ikke udbudstypen {value}, springer den over")
+            else:
+                raise
     tenders = [normalize(n) for n in raw]
     if notice_types:
         tenders = [t for t in tenders if not t["notice_type"] or t["notice_type"] in notice_types]

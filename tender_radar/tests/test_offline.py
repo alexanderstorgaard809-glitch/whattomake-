@@ -58,19 +58,33 @@ class OfflineTests(unittest.TestCase):
         self.assertIn("classification-cpv IN (72000000 48000000)", q)
         self.assertIn("notice-type IN (cn-standard)", q)
 
-    def test_fetch_retries_without_notice_type(self):
+    def test_fetch_drops_unsupported_values(self):
         calls = []
+
+        def unsupported(field, value):
+            return ted.TedError("400", {"error": {"type": "QUERY_UNSUPPORTED_FIELD_VALUE",
+                                                  "fieldName": field, "fieldValue": value}})
 
         def fake_search(query, scope, log):
             calls.append(query)
-            if "notice-type" in query:
-                raise ted.TedError("TED svarede 400: unknown value for notice-type")
+            if "72212800" in query:
+                raise unsupported("classification-cpv", "72212800")
+            if "cn-bogus" in query:
+                raise unsupported("notice-type", "cn-bogus")
             return [RAW, dict(RAW, **{"publication-number": "2", "notice-type": "can-standard"})]
 
         with mock.patch.object(ted, "search", side_effect=fake_search):
-            out = ted.fetch(["72000000"], 30, ["cn-standard"], log=lambda *_: None)
-        self.assertEqual(len(calls), 2)
+            out = ted.fetch(["72000000", "72212800"], 30, ["cn-standard", "cn-bogus"], log=lambda *_: None)
+        self.assertEqual(len(calls), 3)
+        self.assertIn("classification-cpv IN (72000000)", calls[-1])
+        self.assertIn("notice-type IN (cn-standard)", calls[-1])
         self.assertEqual([t["id"] for t in out], ["123456-2026"])
+
+    def test_fetch_raises_other_errors(self):
+        err = ted.TedError("400", {"error": {"type": "QUERY_SYNTAX_ERROR"}})
+        with mock.patch.object(ted, "search", side_effect=err):
+            with self.assertRaises(ted.TedError):
+                ted.fetch(["72000000"], 30, [], log=lambda *_: None)
 
     def test_pipeline_and_report(self):
         tenders = [ted.normalize(RAW)]
