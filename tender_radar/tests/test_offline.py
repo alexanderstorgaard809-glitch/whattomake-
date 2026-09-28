@@ -107,6 +107,17 @@ class OfflineTests(unittest.TestCase):
             out = analyze.rerank(first, profile, FakeStrongLLM(**item), min_first_score=50, log=lambda *_: None)
             self.assertEqual(len(out), 1)  # udbud under 50 i første runde genvurderes ikke
             self.assertEqual(out[0][1], expected, item)
+        # modellen ændrer ID'et, men svarer i samme rækkefølge
+        class RenamingLLM(FakeStrongLLM):
+            def json_call(self, *a):
+                res = super().json_call(*a)
+                for it in res["items"]:
+                    it["id"] = "notice " + it["id"]
+                return res
+        debug = []
+        out = analyze.rerank(first, profile, RenamingLLM(), log=lambda *_: None, debug=debug)
+        self.assertEqual(out[0][1], 92)
+        self.assertEqual(debug[0]["final_score"], 92)
         out = analyze.rerank(first, dict(profile, sells_products=True),
                              FakeStrongLLM(purchase_type="ready-made product or licence"), log=lambda *_: None)
         self.assertEqual(out[0][1], 92)

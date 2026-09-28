@@ -116,9 +116,17 @@ def cmd_report(args):
                 if (not allowed or t["country"] in allowed)
                 and (not t.get("deadline") or t["deadline"] >= today)]  # spring udløbne udbud over
         first_pass = analyze.match(pool, profile, llm)
+        debug = []
         scored = analyze.rerank(first_pass, profile, strong,
                                 min_first_score=cfg.get("rerank_min_score", 50),
-                                max_items=cfg.get("rerank_max", 80))
+                                max_items=cfg.get("rerank_max", 80), debug=debug)
+        save_json(OUTPUT / f"{path.stem}-debug.json", sorted(debug, key=lambda d: -d["final_score"]))
+        top_first = [s for _, s, _ in first_pass[:5]]
+        print(f"  første sortering, top 5 scorer: {top_first}")
+        if scored and not any(s >= profile.get("min_score", cfg["min_score"]) for _, s, _ in scored):
+            print("  Ingen over tærsklen efter grundig vurdering. Bedste 5:")
+            for t, s, r in scored[:5]:
+                print(f"   {s:3d}%  {t['country']}  {t['ai']['title_en'][:60]}  ({t.get('purchase_type')})")
         min_score = profile.get("min_score", cfg["min_score"])
         hits = [r for r in scored if r[1] >= min_score][: cfg["max_results_per_report"]]
         page, md = report.build(profile, hits, total=len(pool), days=data["days"])

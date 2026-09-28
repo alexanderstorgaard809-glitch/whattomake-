@@ -208,15 +208,24 @@ CAP_TOO_BIG = 55
 
 
 def apply_caps(score, item, t, profile):
+    """Returnerer (score efter lofter, liste af årsager til at scoren blev sænket)."""
+    caps = []
     if item["conflicts_with_exclusions"]:
-        score = min(score, CAP_EXCLUDED)
+        caps.append(("ikke interesseret-listen", CAP_EXCLUDED))
     if item["purchase_type"] in ("ready-made product or licence", "hardware") and not profile.get("sells_products"):
-        score = min(score, CAP_PRODUCT)
+        caps.append(("køb af færdigt produkt/hardware", CAP_PRODUCT))
     if item["too_big"]:
-        score = min(score, CAP_TOO_BIG)
+        caps.append(("for stor opgave", CAP_TOO_BIG))
     if not language_ok(t, profile):
-        score = min(score, LANGUAGE_CAP)
-    return score
+        caps.append(("tilbudssprog", LANGUAGE_CAP))
+    reasons = [name for name, cap in caps if score > cap]
+    for _, cap in caps:
+        score = min(score, cap)
+    return score, reasons
+
+
+def _norm_id(value):
+    return str(value or "").replace("ID:", "").strip()
 
 
 def _profile_text(profile):
@@ -229,15 +238,17 @@ def _profile_text(profile):
             f"NOT interested in: {', '.join(profile.get('exclude', [])) or 'nothing specified'}")
 
 
-def rerank(first_pass, profile, llm, min_first_score=50, max_items=80, log=print):
+def rerank(first_pass, profile, llm, min_first_score=50, max_items=80, log=print, debug=None):
     """Genvurderer de bedste udbud fra første runde med en stærkere model og hele udbudsteksten.
 
     Returnerer (udbud, score, begrundelse) for de genvurderede udbud; udbud['purchase_type'] sættes.
+    Hvis `debug` er en liste, tilføjes den rå vurdering af hvert udbud til den.
     """
     todo = [t for t, score, _ in first_pass if score >= min_first_score][:max_items]
+    first_scores = {t["id"]: score for t, score, _ in first_pass}
     lang = LANG_NAMES.get(profile.get("report_language", "en"), "English")
     log(f"  grundig vurdering af de {len(todo)} mest lovende med {llm.models[0]} ...")
-    results = []
+    results, missing, cap_counts = [], 0, {}
     for i, batch in enumerate(_chunks(todo, RERANK_BATCH), 1):
         blocks = []
         for t in batch:
@@ -246,15 +257,33 @@ def rerank(first_pass, profile, llm, min_first_score=50, max_items=80, log=print
             blocks.append(f"{_tender_text(t)}\nBid languages: {langs}\n"
                           f"Procedure: {t.get('procedure') or 'unknown'}\n"
                           f"English summary: {a['title_en']}. {a['summary_en']}")
-        user = (f"COMPANY PROFILE\n{_profile_text(profile)}\n\nWrite reasons in {lang}.\n\n"
+        user = (f"COMPANY PROFILE\n{_profile_text(profile)}\n\nWrite reasons in {lang}.\n"
+                "Return exactly one item per tender, using the tender's ID exactly as given.\n\n"
                 "TENDERS\n\n" + "\n\n---\n\n".join(blocks))
         result = llm.json_call(RERANK_SYSTEM, user, "tender_assessment", RERANK_SCHEMA)
-        by_id = {item["id"]: item for item in result.get("items", [])}
-        for t in batch:
-            item = by_id.get(t["id"])
+        items = result.get("items", [])
+        by_id = {_norm_id(item.get("id")): item for item in items}
+        # Reserve: hvis modellen har ændret ID'erne, men svaret har samme længde, bruges rækkefølgen.
+        by_pos = items if len(items) == len(batch) else []
+        matched = 0
+        for pos, t in enumerate(batch):
+            item = by_id.get(t["id"]) or (by_pos[pos] if by_pos else None)
             if not item:
+                missing += 1
                 continue
-            score = apply_caps(int(item["score"]), item, t, profile)
+            matched += 1
+            score, reasons = apply_caps(int(item["score"]), item, t, profile)
+            for r in reasons:
+                cap_counts[r] = cap_counts.get(r, 0) + 1
+            if debug is not None:
+                debug.append({"id": t["id"], "title": t["ai"]["title_en"], "country": t["country"],
+                              "first_pass_score": first_scores.get(t["id"]), "ai_score": item["score"],
+                              "final_score": score, "lowered_by": reasons, **{k: item[k] for k in
+                              ("purchase_type", "conflicts_with_exclusions", "too_big", "reason")}})
             results.append((dict(t, purchase_type=item["purchase_type"]), score, item["reason"]))
-        log(f"  batch {i}: {len(by_id)}/{len(batch)} vurderet (pris indtil nu: ${llm.total_cost:.4f})")
+        log(f"  batch {i}: {matched}/{len(batch)} vurderet (pris indtil nu: ${llm.total_cost:.4f})")
+    if missing:
+        log(f"  ADVARSEL: {missing} udbud fik intet svar fra modellen")
+    if cap_counts:
+        log("  sænket af lofter: " + ", ".join(f"{k}: {v}" for k, v in cap_counts.items()))
     return sorted(results, key=lambda r: r[1], reverse=True)
