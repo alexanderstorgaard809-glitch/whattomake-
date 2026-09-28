@@ -54,7 +54,7 @@ class OpenRouter:
     def _post(self, body):
         req = urllib.request.Request(API_URL, data=json.dumps(body).encode("utf-8"), method="POST", headers={
             "Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json",
-            "X-Title": "Claim Pilot"})
+            "X-Title": "Dunwell"})
         try:
             with urllib.request.urlopen(req, timeout=180) as resp:
                 data = json.loads(resp.read().decode("utf-8"))

@@ -1,11 +1,11 @@
-# Render Blueprint: opretter Claim Pilot som en gratis web service.
+# Render Blueprint: opretter Dunwell som en gratis web service.
 # Render → New → Blueprint → vælg dette repo. Udfyld de hemmelige værdier, når Render spørger.
 services:
   - type: web
-    name: claim-pilot
+    name: dunwell
     runtime: python
     plan: free
-    rootDir: claim_pilot
+    rootDir: dunwell
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     healthCheckPath: /healthz

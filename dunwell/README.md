@@ -1,4 +1,4 @@
-# Claim Pilot
+# Dunwell
 
 Hjælper freelancere og små virksomheder med at få betaling fra kunder i **EU og Storbritannien**:
 
@@ -16,8 +16,8 @@ Brugerfladen er på engelsk, fordi produktet er til hele EU.
 
 Krav: Python 3.9 eller nyere. Ingen ekstra pakker.
 
-1. Kopiér din `.env` (med `OPENROUTER_API_KEY`) ind i mappen `claim_pilot`.
-2. Åbn en terminal i mappen `claim_pilot`, og kør:
+1. Kopiér din `.env` (med `OPENROUTER_API_KEY`) ind i mappen `dunwell`.
+2. Åbn en terminal i mappen `dunwell`, og kør:
    ```
    python app.py
    ```
@@ -28,7 +28,7 @@ Krav: Python 3.9 eller nyere. Ingen ekstra pakker.
 Siden består af: forside (`/`), demo (`/app`), privatlivspolitik (`/privacy`) og vilkår (`/terms`).
 
 **1. Lav en separat OpenRouter-nøgle med et beløbsloft**
-På https://openrouter.ai/keys: *Create key*, kald den "claim-pilot-web", og sæt **Credit limit** til fx 5 USD. Så kan siden aldrig bruge mere, selv hvis nogen misbruger den.
+På https://openrouter.ai/keys: *Create key*, kald den "dunwell-web", og sæt **Credit limit** til fx 5 USD. Så kan siden aldrig bruge mere, selv hvis nogen misbruger den.
 
 **2. Opret siden på Render**
 1. Gå til https://render.com og log ind med din GitHub-konto.
@@ -39,7 +39,7 @@ På https://openrouter.ai/keys: *Create key*, kald den "claim-pilot-web", og sæ
    - `OPERATOR_ADDRESS`: din adresse (vises i privatlivspolitikken, det kræver GDPR)
    - `OPERATOR_COUNTRY`: dit land (til vilkårene)
    - `CONTACT_EMAIL`: en e-mail, folk kan skrive til
-4. Klik **Apply**. Efter et par minutter er siden live på `https://claim-pilot.onrender.com` (eller et lignende navn).
+4. Klik **Apply**. Efter et par minutter er siden live på `https://dunwell.onrender.com` (eller et lignende navn).
 
 **Bemærk:** Den gratis plan sover efter 15 minutter uden besøg, og det første besøg tager så ca. et minut.
 
@@ -82,7 +82,7 @@ python -m unittest discover tests
 
 ## Vigtigt
 
-Claim Pilot er et selvhjælpsværktøj og ikke juridisk rådgivning. Før der tages betaling fra kunder, skal en jurist vurdere reglerne for juridisk bistand i de lande, der sælges til.
+Dunwell er et selvhjælpsværktøj og ikke juridisk rådgivning. Før der tages betaling fra kunder, skal en jurist vurdere reglerne for juridisk bistand i de lande, der sælges til.
 
 ## Testsager
 

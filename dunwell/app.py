@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claim Pilot: få betaling fra kunder i EU og UK.
+"""Dunwell: få betaling fra kunder i EU og UK.
 
 Lokalt:  python app.py      og åbn http://localhost:8000
 Online:  se README (Render). Sæt HOST=0.0.0.0 og miljøvariablerne OPENROUTER_API_KEY, OPERATOR_NAME, CONTACT_EMAIL.
@@ -155,7 +155,7 @@ def render_page(name):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "ClaimPilot"
+    server_version = "Dunwell"
     sys_version = ""
 
     def do_GET(self):
@@ -229,7 +229,7 @@ def main():
     port = int(os.environ.get("PORT", 8000))
     server = ThreadingHTTPServer((host, port), Handler)
     url = f"http://localhost:{port}"
-    print(f"Claim Pilot kører på {url}  (stop med Ctrl+C)", flush=True)
+    print(f"Dunwell kører på {url}  (stop med Ctrl+C)", flush=True)
     if host == "127.0.0.1":
         try:
             webbrowser.open(url)
