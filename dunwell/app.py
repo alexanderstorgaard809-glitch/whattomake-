@@ -178,6 +178,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if path == "/favicon.ico":
+            return self._send(204, b"", "image/x-icon")  # intet ikon, men ingen 404-støj i loggen
         if path == "/healthz":
             return self._send(200, b"ok", "text/plain")
         if path == "/api/meta":
